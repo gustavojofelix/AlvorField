@@ -1,0 +1,44 @@
+<mat-toolbar class="app-toolbar">
+  <div class="toolbar-content">
+    <!-- Logo -->
+    <a routerLink="/" class="logo-link">
+      <mat-icon class="logo-icon">eco</mat-icon>
+      <span class="logo-text">AlvorField</span>
+    </a>
+
+    <!-- Espaçador -->
+    <span class="spacer"></span>
+
+    <!-- Menu do utilizador (quando autenticado) -->
+    @if (authService.isLoggedIn()) {
+      <button mat-button [matMenuTriggerFor]="userMenu" class="user-menu-btn" id="user-menu">
+        <mat-icon>account_circle</mat-icon>
+        <span class="user-name">{{ userName }}</span>
+        <mat-icon class="dropdown-icon">arrow_drop_down</mat-icon>
+      </button>
+
+      <mat-menu #userMenu="matMenu" class="user-dropdown">
+        <div class="menu-header">
+          <p class="menu-user-name">{{ userName }}</p>
+          <p class="menu-user-type">{{ userType }}</p>
+        </div>
+        <mat-divider></mat-divider>
+        <button mat-menu-item routerLink="/dashboard">
+          <mat-icon>dashboard</mat-icon>
+          <span>Painel</span>
+        </button>
+        <button mat-menu-item (click)="logout()" id="logout-btn">
+          <mat-icon>logout</mat-icon>
+          <span>Terminar sessão</span>
+        </button>
+      </mat-menu>
+    } @else {
+      <a mat-button routerLink="/login" class="toolbar-link" id="nav-login">
+        Entrar
+      </a>
+      <a mat-raised-button routerLink="/register" color="primary" class="toolbar-register-btn" id="nav-register">
+        Criar conta
+      </a>
+    }
+  </div>
+</mat-toolbar>

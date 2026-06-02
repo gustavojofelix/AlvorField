@@ -1,0 +1,141 @@
+<div class="auth-page-wrapper">
+  <!-- Secção esquerda: Apresentação e Identidade de Marca (Visível em Ecrãs Grandes) -->
+  <div class="auth-hero-section">
+    <div class="hero-bg-overlay"></div>
+    <div class="hero-content">
+      <div class="hero-logo">
+        <mat-icon>eco</mat-icon>
+        <span>AlvorField</span>
+      </div>
+      
+      <div class="hero-main-text">
+        <h1>Conectando a Agricultura Moçambicana ao Futuro Digital</h1>
+        <p>A primeira plataforma integrada que conecta diretamente produtores agrícolas, compradores comerciais e parceiros financeiros para maximizar o rendimento e evitar o desperdício.</p>
+      </div>
+
+      <div class="hero-features">
+        <div class="feature-item">
+          <div class="feature-icon"><mat-icon>share_location</mat-icon></div>
+          <div class="feature-text">
+            <h3>Geolocalização Inteligente</h3>
+            <p>Encontre produção disponível e compradores ideais na sua própria província ou distrito.</p>
+          </div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon"><mat-icon>hub</mat-icon></div>
+          <div class="feature-text">
+            <h3>Conexões Diretas</h3>
+            <p>Produtores vendem diretamente a mercados urbanos, eliminando intermediários desnecessários.</p>
+          </div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon"><mat-icon>trending_up</mat-icon></div>
+          <div class="feature-text">
+            <h3>Oportunidades de Investimento</h3>
+            <p>Apoio financeiro mapeado para pequenos e médios agricultores expandirem a sua capacidade.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-footer">
+        <p>© 2026 AlvorField. Desenvolvido para o progresso de Moçambique 🇲🇿</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Secção direita: Formulário e Utilizadores Rápidos -->
+  <div class="auth-form-section">
+    <div class="form-container">
+      
+      <!-- Cabeçalho Mobile -->
+      <div class="mobile-brand">
+        <div class="logo-circle">
+          <mat-icon>eco</mat-icon>
+        </div>
+        <h2>AlvorField</h2>
+        <p>Conectando o campo ao mercado</p>
+      </div>
+
+      <div class="form-card-header">
+        <h2>Entrar na Plataforma</h2>
+        <p>Insira os seus dados de acesso ou escolha um utilizador demonstrativo abaixo.</p>
+      </div>
+
+      <!-- Utilizadores de Teste (Clicar para Entrar) -->
+      <div class="demo-users-section">
+        <h3 class="section-title">
+          <mat-icon>science</mat-icon>
+          Contas Demonstrativas (Clique para testar)
+        </h3>
+        
+        <div class="demo-users-grid">
+          @for (user of sampleUsers; track user.id) {
+            <div class="demo-user-card" (click)="quickLogin(user)" [attr.id]="'demo-user-' + user.tipo.toLowerCase()">
+              <div class="demo-user-header">
+                <div class="avatar-circle" [ngClass]="user.tipo.toLowerCase()">
+                  <mat-icon>{{ user.avatar }}</mat-icon>
+                </div>
+                <div class="user-meta">
+                  <span class="user-name">{{ user.nome }}</span>
+                  <span class="user-role-badge" [ngClass]="user.tipo.toLowerCase()">
+                    {{ user.tipo }}
+                  </span>
+                </div>
+              </div>
+              <p class="user-desc">{{ user.descricao }}</p>
+              <div class="user-loc">
+                <mat-icon>place</mat-icon>
+                <span>{{ user.localidade }}</span>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Formulário de Login -->
+      <mat-card class="login-mat-card">
+        <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Número de telefone</mat-label>
+            <mat-icon matPrefix>phone</mat-icon>
+            <input matInput formControlName="telefone" placeholder="841234567" maxlength="9" />
+            <mat-error *ngIf="loginForm.get('telefone')?.hasError('required') && loginForm.get('telefone')?.touched">
+              O número de telefone é obrigatório.
+            </mat-error>
+            <mat-error *ngIf="loginForm.get('telefone')?.hasError('pattern') && loginForm.get('telefone')?.touched">
+              Insira um número válido em Moçambique com 9 dígitos.
+            </mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Password</mat-label>
+            <mat-icon matPrefix>lock</mat-icon>
+            <input matInput [type]="hidePassword ? 'password' : 'text'" formControlName="password" placeholder="Insira a password" />
+            <button mat-icon-button matSuffix type="button" (click)="hidePassword = !hidePassword">
+              <mat-icon>{{ hidePassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+            </button>
+            <mat-error *ngIf="loginForm.get('password')?.invalid && loginForm.get('password')?.touched">
+              A password é obrigatória (mínimo 6 caracteres).
+            </mat-error>
+          </mat-form-field>
+
+          <button mat-raised-button color="primary" type="submit" class="submit-btn full-width" [disabled]="loginForm.invalid || isLoading">
+            @if (isLoading) {
+              <mat-icon class="spin-animation">sync</mat-icon>
+              A entrar...
+            } @else {
+              <mat-icon>login</mat-icon>
+              Iniciar Sessão
+            }
+          </button>
+        </form>
+
+        <div class="form-footer">
+          <p>Ainda não tem conta no AlvorField?</p>
+          <a routerLink="/register" class="register-link">Criar conta como Produtor, Consumidor ou Investidor</a>
+        </div>
+      </mat-card>
+
+    </div>
+  </div>
+</div>

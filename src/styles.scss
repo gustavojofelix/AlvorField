@@ -1,0 +1,107 @@
+// ==========================================================================
+// AlvorField — Estilos globais e tema Angular Material
+// Plataforma SaaS Agrícola para Moçambique
+// Cores: Verde primário (#2E7D32) | Azul acento (#1565C0)
+// ==========================================================================
+
+@use '@angular/material' as mat;
+
+// Definição do tema AlvorField com paletas customizadas
+html {
+  height: 100%;
+  @include mat.theme(
+    (
+      color: (
+        primary: mat.$green-palette,
+        tertiary: mat.$blue-palette,
+      ),
+      typography: Inter,
+      density: 0,
+    )
+  );
+}
+
+body {
+  color-scheme: light;
+  background-color: #f5f7fa;
+  color: var(--mat-sys-on-surface);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font: var(--mat-sys-body-medium);
+  margin: 0;
+  height: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+// ==========================================================================
+// Overrides globais de componentes Material
+// ==========================================================================
+
+// Botões com bordas arredondadas
+.mat-mdc-raised-button,
+.mat-mdc-flat-button,
+.mat-mdc-stroked-button {
+  border-radius: 10px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.2px;
+}
+
+// Form fields com bordas suaves
+.mat-mdc-form-field {
+  .mdc-notched-outline__leading,
+  .mdc-notched-outline__trailing {
+    border-radius: 12px !important;
+  }
+}
+
+// Snackbar de sucesso
+.snackbar-success {
+  --mdc-snackbar-container-color: #2E7D32;
+  --mdc-snackbar-supporting-text-color: white;
+  --mat-snack-bar-button-color: #C8E6C9;
+}
+
+// Snackbar de erro
+.snackbar-error {
+  --mdc-snackbar-container-color: #C62828;
+  --mdc-snackbar-supporting-text-color: white;
+  --mat-snack-bar-button-color: #FFCDD2;
+}
+
+// ==========================================================================
+// Utilitários globais
+// ==========================================================================
+
+// Scrollbar customizada
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #B0BEC5;
+  border-radius: 4px;
+
+  &:hover {
+    background: #90A4AE;
+  }
+}
+
+// Links globais
+a {
+  color: #1565C0;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+// Fundo com padrão subtil
+.auth-page-bg {
+  background: linear-gradient(135deg, #f5f7fa 0%, #e8f5e9 50%, #e3f2fd 100%);
+  min-height: 100vh;
+}

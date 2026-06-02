@@ -1,0 +1,17 @@
+// src/app/theme/custom-theme.scss
+@use '@angular/material' as mat;
+
+// Paleta azul (primary) e verde (accent) para AlvorField
+$primary-palette: mat.define-palette(mat.$blue-palette);
+$accent-palette: mat.define-palette(mat.$green-palette, A200, A100, A400);
+
+$theme: mat.define-light-theme((
+  color: (
+    primary: $primary-palette,
+    accent: $accent-palette,
+  ),
+  typography: mat.define-typography-config(),
+  density: 0,
+));
+
+@include mat.all-component-themes($theme);

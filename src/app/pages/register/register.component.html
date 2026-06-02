@@ -1,0 +1,183 @@
+<div class="auth-page-wrapper">
+  <!-- Secção esquerda: Branding & Benefícios do Registo (Desktop) -->
+  <div class="auth-hero-section">
+    <div class="hero-bg-overlay"></div>
+    <div class="hero-content">
+      <div class="hero-logo">
+        <mat-icon>eco</mat-icon>
+        <span>AlvorField</span>
+      </div>
+      
+      <div class="hero-main-text">
+        <h1>Junte-se à Rede que Alimenta Moçambique</h1>
+        <p>Ao registar-se no AlvorField, passa a fazer parte de um ecossistema vivo de cooperação agrícola sustentada por tecnologia de ponta.</p>
+      </div>
+
+      <div class="hero-features">
+        <div class="feature-item">
+          <div class="feature-icon"><mat-icon>agriculture</mat-icon></div>
+          <div class="feature-text">
+            <h3>Para Produtores</h3>
+            <p>Divulgue as suas colheitas antes da colheita e garanta contratos de compra antecipados.</p>
+          </div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon"><mat-icon>shopping_basket</mat-icon></div>
+          <div class="feature-text">
+            <h3>Para Consumidores</h3>
+            <p>Compre produtos frescos diretamente da machamba com preços competitivos e rastreabilidade total.</p>
+          </div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon"><mat-icon>trending_up</mat-icon></div>
+          <div class="feature-text">
+            <h3>Para Investidores</h3>
+            <p>Financie produtores qualificados com contratos claros e acompanhe o crescimento via app.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-footer">
+        <p>© 2026 AlvorField. O campo moçambicano conectado de ponta a ponta.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Secção direita: Formulário de Registo -->
+  <div class="auth-form-section">
+    <div class="form-container">
+      
+      <!-- Cabeçalho Mobile -->
+      <div class="mobile-brand">
+        <div class="logo-circle">
+          <mat-icon>eco</mat-icon>
+        </div>
+        <h2>AlvorField</h2>
+        <p>Crie a sua conta agrícola e tecnológica</p>
+      </div>
+
+      <div class="form-card-header">
+        <h2>Criar Nova Conta</h2>
+        <p>Preencha os dados abaixo para fazer parte da nossa rede de abastecimento digital.</p>
+      </div>
+
+      <mat-card class="register-mat-card">
+        <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="register-form">
+          
+          <!-- Nome -->
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Nome Completo / Nome do Negócio</mat-label>
+            <mat-icon matPrefix>person</mat-icon>
+            <input matInput formControlName="nome" placeholder="Ex: Machamba de Gaza Lda ou João Macamo" />
+            <mat-error *ngIf="registerForm.get('nome')?.hasError('required') && registerForm.get('nome')?.touched">
+              O nome é obrigatório.
+            </mat-error>
+            <mat-error *ngIf="registerForm.get('nome')?.hasError('minlength') && registerForm.get('nome')?.touched">
+              O nome deve conter pelo menos 3 caracteres.
+            </mat-error>
+          </mat-form-field>
+
+          <!-- Telefone -->
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Número de telefone</mat-label>
+            <mat-icon matPrefix>phone</mat-icon>
+            <input matInput formControlName="telefone" placeholder="841234567" maxlength="9" />
+            <mat-error *ngIf="registerForm.get('telefone')?.hasError('required') && registerForm.get('telefone')?.touched">
+              O número de telefone é obrigatório.
+            </mat-error>
+            <mat-error *ngIf="registerForm.get('telefone')?.hasError('pattern') && registerForm.get('telefone')?.touched">
+              Insira um número móvel válido com 9 dígitos.
+            </mat-error>
+          </mat-form-field>
+
+          <!-- Tipo de utilizador -->
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Perfil / Função</mat-label>
+            <mat-icon matPrefix>badge</mat-icon>
+            <mat-select formControlName="tipo">
+              @for (type of userTypes; track type.value) {
+                <mat-option [value]="type.value">
+                  <div class="option-content">
+                    <mat-icon>{{ type.icon }}</mat-icon>
+                    <div class="option-details">
+                      <span class="option-title">{{ type.label }}</span>
+                    </div>
+                  </div>
+                </mat-option>
+              }
+            </mat-select>
+            <mat-error *ngIf="registerForm.get('tipo')?.hasError('required') && registerForm.get('tipo')?.touched">
+              Selecione o seu perfil na plataforma.
+            </mat-error>
+          </mat-form-field>
+
+          <!-- Localidade -->
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Localização / Distrito</mat-label>
+            <mat-icon matPrefix>place</mat-icon>
+            <input matInput formControlName="localidade" placeholder="Ex: Chókwè, Gaza ou Maputo Cidade" />
+            <mat-error *ngIf="registerForm.get('localidade')?.invalid && registerForm.get('localidade')?.touched">
+              A localização é obrigatória.
+            </mat-error>
+          </mat-form-field>
+
+          <!-- Descrição do Negócio / Machamba -->
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Breve Descrição / O que produz ou procura?</mat-label>
+            <mat-icon matPrefix>description</mat-icon>
+            <textarea matInput formControlName="descricao" rows="2" placeholder="Ex: Produzo 5 toneladas de cebola vermelha por época e tomates..."></textarea>
+            <mat-error *ngIf="registerForm.get('descricao')?.hasError('required') && registerForm.get('descricao')?.touched">
+              A descrição ajuda a ligar compradores a produtores e é obrigatória.
+            </mat-error>
+          </mat-form-field>
+
+          <!-- Passwords -->
+          <div class="password-fields-row">
+            <mat-form-field appearance="outline">
+              <mat-label>Password</mat-label>
+              <mat-icon matPrefix>lock</mat-icon>
+              <input matInput [type]="hidePassword ? 'password' : 'text'" formControlName="password" placeholder="Mínimo 6 chars" />
+              <button mat-icon-button matSuffix type="button" (click)="hidePassword = !hidePassword">
+                <mat-icon>{{ hidePassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+              </button>
+              <mat-error *ngIf="registerForm.get('password')?.hasError('required') && registerForm.get('password')?.touched">
+                A password é obrigatória.
+              </mat-error>
+              <mat-error *ngIf="registerForm.get('password')?.hasError('minlength') && registerForm.get('password')?.touched">
+                A password deve ter pelo menos 6 caracteres.
+              </mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Confirmar</mat-label>
+              <mat-icon matPrefix>lock_outline</mat-icon>
+              <input matInput [type]="hideConfirmPassword ? 'password' : 'text'" formControlName="confirmPassword" placeholder="Confirme" />
+              <button mat-icon-button matSuffix type="button" (click)="hideConfirmPassword = !hideConfirmPassword">
+                <mat-icon>{{ hideConfirmPassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+              </button>
+              <mat-error *ngIf="registerForm.hasError('mismatch') && registerForm.get('confirmPassword')?.touched">
+                As passwords não coincidem.
+              </mat-error>
+            </mat-form-field>
+          </div>
+
+          <button mat-raised-button color="primary" type="submit" class="submit-btn full-width" [disabled]="registerForm.invalid || isLoading">
+            @if (isLoading) {
+              <mat-icon class="spin-animation">sync</mat-icon>
+              A criar conta...
+            } @else {
+              <mat-icon>person_add</mat-icon>
+              Criar Conta Grátis
+            }
+          </button>
+        </form>
+
+        <div class="form-footer">
+          <p>Já tem uma conta no AlvorField?</p>
+          <a routerLink="/login" class="login-link">Fazer login agora</a>
+        </div>
+      </mat-card>
+
+    </div>
+  </div>
+</div>

@@ -1,0 +1,144 @@
+<div class="dashboard-page-container">
+  
+  <!-- Hero Section -->
+  <div class="dashboard-hero animate-fade-in">
+    <div class="hero-main-content">
+      <div class="avatar-holder">
+        <mat-icon>{{ getUserTypeIcon() }}</mat-icon>
+      </div>
+      <div class="user-info-text">
+        <span class="greeting-prefix">{{ greeting }},</span>
+        <h1 class="user-fullname">{{ user?.nome }}</h1>
+        <div class="user-badges">
+          <mat-chip class="role-chip" [ngClass]="user?.tipo?.toLowerCase() || ''">
+            <mat-icon class="chip-icon">{{ getUserTypeIcon() }}</mat-icon>
+            {{ user?.tipo }}
+          </mat-chip>
+          <span class="location-badge">
+            <mat-icon>place</mat-icon>
+            {{ user?.localidade || 'Não especificado' }}
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="hero-desc-box">
+      <p class="user-desc">
+        <mat-icon>description</mat-icon>
+        <strong>Perfil do Negócio:</strong> "{{ user?.descricao || 'Sem descrição cadastrada.' }}"
+      </p>
+    </div>
+  </div>
+
+  <!-- Duas Colunas de Conteúdo -->
+  <div class="dashboard-content-layout">
+    
+    <!-- Coluna Esquerda: Ações AgriTech de Acordo com Perfil -->
+    <div class="left-actions-col">
+      <h2 class="column-title">
+        <mat-icon>apps</mat-icon>
+        Painel de Ferramentas AgriTech
+      </h2>
+
+      <div class="action-cards-grid">
+        @for (card of dashboardCards; track card.title) {
+          <mat-card class="action-card" (click)="triggerAction(card.action)">
+            <div class="card-top">
+              <div class="icon-bubble" [style.background]="card.color + '15'">
+                <mat-icon [style.color]="card.color">{{ card.icon }}</mat-icon>
+              </div>
+              <span class="action-tag" [style.color]="card.color" [style.background]="card.color + '10'">Disponível</span>
+            </div>
+            
+            <mat-card-header>
+              <mat-card-title>{{ card.title }}</mat-card-title>
+            </mat-card-header>
+            
+            <mat-card-content>
+              <p>{{ card.description }}</p>
+            </mat-card-content>
+
+            <mat-card-actions>
+              <button mat-flat-button [style.background]="card.color" class="action-btn">
+                {{ card.action }}
+                <mat-icon>arrow_forward</mat-icon>
+              </button>
+            </mat-card-actions>
+          </mat-card>
+        }
+      </div>
+    </div>
+
+    <!-- Coluna Direita: Conexões Ativas e Dados de Mercado -->
+    <div class="right-widgets-col">
+      
+      <!-- Widget 1: Conexões de Sucesso Campo-Mercado -->
+      <div class="widget-card connections-card">
+        <div class="widget-header">
+          <div class="widget-icon-box"><mat-icon>hub</mat-icon></div>
+          <div>
+            <h3>Conexões e Negócios Recentes</h3>
+            <p>Pontes entre produtores rurais e compradores</p>
+          </div>
+        </div>
+        
+        <div class="connections-list">
+          @for (conn of connections; track conn.produtor) {
+            <div class="connection-item">
+              <div class="connection-nodes">
+                <div class="node prod">
+                  <mat-icon>agriculture</mat-icon>
+                  <span>{{ conn.produtor }}</span>
+                </div>
+                <div class="node-arrow">
+                  <mat-icon>chevron_right</mat-icon>
+                  <span class="dist-lbl">{{ conn.distrito }}</span>
+                </div>
+                <div class="node cons">
+                  <mat-icon>shopping_basket</mat-icon>
+                  <span>{{ conn.consumidor }}</span>
+                </div>
+              </div>
+
+              <div class="connection-details">
+                <span class="product-badge">{{ conn.produto }} ({{ conn.quantidade }})</span>
+                <span class="status-badge" [ngClass]="conn.status.toLowerCase().replace(' ', '-')">
+                  {{ conn.status }}
+                </span>
+              </div>
+              <span class="time-lbl">{{ conn.timestamp }}</span>
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Widget 2: Preços SIMA em Moçambique -->
+      <div class="widget-card prices-card">
+        <div class="widget-header">
+          <div class="widget-icon-box"><mat-icon>trending_up</mat-icon></div>
+          <div>
+            <h3>Preços de Referência SIMA</h3>
+            <p>Cotação atualizada do mercado agrícola nacional</p>
+          </div>
+        </div>
+
+        <div class="prices-list">
+          @for (price of prices; track price.produto) {
+            <div class="price-item">
+              <span class="price-name">{{ price.produto }}</span>
+              <div class="price-data">
+                <span class="price-val">{{ price.preco }}</span>
+                <span class="price-var" [ngClass]="{ 'up': price.subiu, 'down': !price.subiu }">
+                  <mat-icon>{{ price.subiu ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+                  {{ price.variacao }}
+                </span>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>

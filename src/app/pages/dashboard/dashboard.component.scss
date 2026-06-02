@@ -1,0 +1,503 @@
+.dashboard-page-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px 24px;
+  font-family: 'Inter', sans-serif;
+}
+
+// ==========================================================================
+// Hero Section
+// ==========================================================================
+.dashboard-hero {
+  background: linear-gradient(135deg, #1b5e20 0%, #2e7d32 60%, #1565c0 100%);
+  border-radius: 24px;
+  padding: 32px;
+  color: white;
+  box-shadow: 0 10px 30px rgba(46, 125, 50, 0.15);
+  margin-bottom: 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -10%;
+    width: 400px;
+    height: 400px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.05);
+    pointer-events: none;
+  }
+
+  .hero-main-content {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    z-index: 2;
+  }
+
+  .avatar-holder {
+    width: 80px;
+    height: 80px;
+    background: rgba(255, 255, 255, 0.18);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+
+    mat-icon {
+      font-size: 40px;
+      width: 40px;
+      height: 40px;
+    }
+  }
+
+  .user-info-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    .greeting-prefix {
+      font-size: 1.1rem;
+      opacity: 0.85;
+      font-weight: 500;
+    }
+
+    .user-fullname {
+      font-size: 2.2rem;
+      font-weight: 800;
+      margin: 0;
+      letter-spacing: -0.8px;
+      line-height: 1.1;
+    }
+
+    .user-badges {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+  }
+
+  .role-chip {
+    background: rgba(255, 255, 255, 0.22) !important;
+    color: white !important;
+    font-weight: 700;
+    font-size: 0.85rem;
+    backdrop-filter: blur(8px);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+
+    .chip-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+      color: white !important;
+    }
+  }
+
+  .location-badge {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.9rem;
+    background: rgba(0, 0, 0, 0.15);
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-weight: 600;
+
+    mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+      color: #81c784;
+    }
+  }
+
+  .hero-desc-box {
+    background: rgba(0, 0, 0, 0.14);
+    border-radius: 16px;
+    padding: 16px 20px;
+    border-left: 4px solid #81c784;
+    z-index: 2;
+
+    .user-desc {
+      margin: 0;
+      font-size: 0.95rem;
+      line-height: 1.5;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      mat-icon {
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+        color: #a5d6a7;
+        flex-shrink: 0;
+      }
+    }
+  }
+}
+
+// ==========================================================================
+// Duas Colunas Layout
+// ==========================================================================
+.dashboard-content-layout {
+  display: grid;
+  grid-template-columns: 1.3fr 0.9fr;
+  gap: 32px;
+}
+
+.column-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #1a252c;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 24px;
+
+  mat-icon {
+    color: #2e7d32;
+  }
+}
+
+// Coluna Esquerda: Grid de Ações
+.left-actions-col {
+  .action-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+  }
+
+  .action-card {
+    border-radius: 20px !important;
+    border: 1px solid #e3e8ed;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03) !important;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    box-sizing: border-box;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    background: white;
+
+    &:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 25px rgba(0, 0, 0, 0.08) !important;
+      border-color: #c8e6c9;
+    }
+
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+
+      .icon-bubble {
+        width: 52px;
+        height: 52px;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        mat-icon {
+          font-size: 28px;
+          width: 28px;
+          height: 28px;
+        }
+      }
+
+      .action-tag {
+        font-size: 0.72rem;
+        font-weight: 800;
+        padding: 4px 10px;
+        border-radius: 20px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+    }
+
+    mat-card-header {
+      padding: 0;
+      margin-bottom: 8px;
+
+      mat-card-title {
+        font-size: 1.15rem;
+        font-weight: 750;
+        color: #1a252c;
+      }
+    }
+
+    mat-card-content {
+      padding: 0;
+      flex: 1;
+
+      p {
+        color: #546e7a;
+        font-size: 0.9rem;
+        line-height: 1.5;
+        margin: 0 0 20px 0;
+      }
+    }
+
+    mat-card-actions {
+      padding: 0;
+      margin: 0;
+
+      .action-btn {
+        width: 100%;
+        height: 44px;
+        font-weight: 700;
+        border-radius: 12px !important;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        color: white !important;
+
+        mat-icon {
+          font-size: 18px;
+          width: 18px;
+          height: 18px;
+          margin-top: 1px;
+        }
+      }
+    }
+  }
+}
+
+// Coluna Direita: Widgets
+.right-widgets-col {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+
+  .widget-card {
+    background: white;
+    border: 1px solid #e3e8ed;
+    border-radius: 20px;
+    padding: 24px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02);
+
+    .widget-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 20px;
+
+      .widget-icon-box {
+        width: 40px;
+        height: 40px;
+        background: #e8f5e9;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        mat-icon {
+          color: #2e7d32;
+          font-size: 22px;
+          width: 22px;
+          height: 22px;
+        }
+      }
+
+      h3 {
+        font-size: 1rem;
+        font-weight: 800;
+        color: #1a252c;
+        margin: 0;
+      }
+
+      p {
+        font-size: 0.78rem;
+        color: #78909c;
+        margin: 2px 0 0 0;
+      }
+    }
+  }
+
+  // Widget 1: Conexões de Sucesso
+  .connections-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .connection-item {
+    background: #f8fafc;
+    border: 1.5px solid #edf2f7;
+    border-radius: 14px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+
+    .connection-nodes {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+
+      .node {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.82rem;
+        font-weight: 700;
+        color: #2c3e50;
+
+        mat-icon {
+          font-size: 16px;
+          width: 16px;
+          height: 16px;
+        }
+
+        &.prod mat-icon { color: #2e7d32; }
+        &.cons mat-icon { color: #e65100; }
+      }
+
+      .node-arrow {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        flex: 1;
+
+        mat-icon {
+          font-size: 16px;
+          width: 16px;
+          height: 16px;
+          color: #90a4ae;
+        }
+
+        .dist-lbl {
+          font-size: 0.65rem;
+          color: #78909c;
+          font-weight: 500;
+          text-align: center;
+        }
+      }
+    }
+
+    .connection-details {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-top: 1px dashed #edf2f7;
+      padding-top: 8px;
+
+      .product-badge {
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: #546e7a;
+      }
+
+      .status-badge {
+        font-size: 0.7rem;
+        font-weight: 800;
+        padding: 2px 8px;
+        border-radius: 20px;
+
+        &.concluído { background: #e8f5e9; color: #2e7d32; }
+        &.em-trânsito { background: #e3f2fd; color: #1565c0; }
+        &.acordado { background: #fff3e0; color: #e65100; }
+      }
+    }
+
+    .time-lbl {
+      font-size: 0.7rem;
+      color: #b0bec5;
+      text-align: right;
+      align-self: flex-end;
+    }
+  }
+
+  // Widget 2: Preços SIMA
+  .prices-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .price-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #edf2f7;
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    .price-name {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: #37474f;
+    }
+
+    .price-data {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      .price-val {
+        font-size: 0.9rem;
+        font-weight: 750;
+        color: #2c3e50;
+      }
+
+      .price-var {
+        display: flex;
+        align-items: center;
+        font-size: 0.75rem;
+        font-weight: 700;
+        padding: 2px 6px;
+        border-radius: 6px;
+
+        mat-icon {
+          font-size: 12px;
+          width: 12px;
+          height: 12px;
+        }
+
+        &.up { background: #e8f5e9; color: #2e7d32; }
+        &.down { background: #ffebee; color: #c62828; }
+      }
+    }
+  }
+}
+
+// ==========================================================================
+// Media Queries para Responsividade
+// ==========================================================================
+@media (max-width: 992px) {
+  .dashboard-content-layout {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+
+  .dashboard-hero {
+    padding: 24px;
+    
+    .hero-main-content {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 16px;
+    }
+
+    .user-fullname {
+      font-size: 1.8rem;
+    }
+  }
+}
