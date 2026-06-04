@@ -32,20 +32,23 @@ export interface Offer {
 export class OfferService {
   private readonly OFFERS_KEY = 'alvorfield_offers';
 
-  // RF-13: Lista de produtos gerida pelo administrador (pré-definida)
-  readonly PREDEFINED_PRODUCTS = [
-    'Milho Branco',
-    'Feijão Nhemba',
-    'Feijão Manteiga',
-    'Gergelim',
-    'Castanha de Caju',
-    'Manga',
-    'Mandioca',
-    'Amendoim',
-    'Batata Doce',
-    'Tomate',
-    'Cebola Vermelha'
-  ];
+  // RF-13 e RF-52: Lista de produtos gerida pelo administrador (carregada do localStorage ou padrão)
+  get PREDEFINED_PRODUCTS(): string[] {
+    const data = localStorage.getItem('alvorfield_products');
+    return data ? JSON.parse(data) : [
+      'Milho Branco',
+      'Feijão Nhemba',
+      'Feijão Manteiga',
+      'Gergelim',
+      'Castanha de Caju',
+      'Manga',
+      'Mandioca',
+      'Amendoim',
+      'Batata Doce',
+      'Tomate',
+      'Cebola Vermelha'
+    ];
+  }
 
   constructor(
     private authService: AuthService,
@@ -269,15 +272,15 @@ export class OfferService {
     return newOffer;
   }
 
-  // RF-17: Editar oferta ativa
+  // RF-17 e RF-55: Editar oferta ativa (permitir ao administrador editar também)
   updateOffer(id: number, updatedData: Partial<Offer>): void {
     const offers = this.getOffers();
     const index = offers.findIndex(o => o.id === id);
     if (index === -1) throw new Error('Oferta não encontrada.');
 
-    // Verificar se o utilizador é dono da oferta
+    // Verificar se o utilizador é dono da oferta ou administrador (RF-55)
     const currentUser = this.authService.getCurrentUser();
-    if (!currentUser || offers[index].produtorId !== currentUser.id) {
+    if (!currentUser || (offers[index].produtorId !== currentUser.id && !currentUser.isAdmin)) {
       throw new Error('Sem autorização para atualizar esta oferta.');
     }
 
@@ -292,6 +295,16 @@ export class OfferService {
 
     this.saveOffers(offers);
     this.verificarEExpirarOfertas();
+  }
+
+  // RF-55: Administrador forçar expiração de qualquer oferta
+  adminForceExpire(id: number): void {
+    const offers = this.getOffers();
+    const index = offers.findIndex(o => o.id === id);
+    if (index === -1) throw new Error('Oferta não encontrada.');
+
+    offers[index].estado = 'Expirada';
+    this.saveOffers(offers);
   }
 
   // RF-18: Pausar e Reativar oferta

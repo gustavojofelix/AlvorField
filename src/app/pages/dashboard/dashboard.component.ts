@@ -7,6 +7,7 @@ import { LocationService, Province } from '../../services/location.service';
 import { OfferService, Offer, OfferStatus } from '../../services/offer.service';
 import { InterestService, Interest } from '../../services/interest.service';
 import { EvaluationService, Evaluation } from '../../services/evaluation.service';
+import { AdminService, AuditLog, ReportRequest } from '../../services/admin.service';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -18,7 +19,6 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTabsModule } from '@angular/material/tabs';
-
 
 interface Connection {
   produtor: string;
@@ -122,7 +122,6 @@ export class DashboardComponent implements OnInit {
   reportReason = '';
   reportedEvaluations: Evaluation[] = [];
   allEvaluations: Evaluation[] = [];
-
 
   // Form de Oferta
   newOffer = {
@@ -242,12 +241,57 @@ export class DashboardComponent implements OnInit {
 
   dashboardCards: { icon: string; title: string; description: string; color: string; action: string }[] = [];
 
+  // ==========================================
+  // VARIÁVEIS DO PAINEL DE ADMINISTRAÇÃO (MÓDULO 7)
+  // ==========================================
+  adminUsers: User[] = [];
+  adminOffers: Offer[] = [];
+  adminInterests: Interest[] = [];
+  adminEvaluations: Evaluation[] = [];
+  adminAuditLogs: AuditLog[] = [];
+  adminReportRequests: ReportRequest[] = [];
+  
+  adminStats = {
+    totalUsers: 0,
+    totalOffers: 0,
+    totalInterests: 0,
+    totalEvaluations: 0,
+    usersByType: {} as { [key: string]: number },
+    offersByState: {} as { [key: string]: number },
+    interestsPerWeek: 0
+  };
+
+  // CRUD de Produtos
+  newProductInput = '';
+  showProductEditModal = false;
+  editingProductOldName = '';
+  editingProductNewName = '';
+
+  // Edição Forçada de Ofertas
+  showAdminOfferEditModal = false;
+  selectedOfferForAdminEdit: Offer | null = null;
+  adminOfferEditForm = {
+    produto: '',
+    quantidade: 0,
+    unidade: 'kg' as 'kg' | 'ton',
+    precoUnitario: 0,
+    dataFim: '',
+    provincia: '',
+    distrito: ''
+  };
+
+  // Resposta a Pedidos de Relatório
+  showAdminReportResponseModal = false;
+  selectedReportRequestForResponse: ReportRequest | null = null;
+  adminReportResponseText = '';
+
   constructor(
     private authService: AuthService,
     private locationService: LocationService,
     private offerService: OfferService,
     private interestService: InterestService,
     public evaluationService: EvaluationService,
+    private adminService: AdminService,
     private router: Router,
     private snack: MatSnackBar
   ) {}
@@ -318,15 +362,15 @@ export class DashboardComponent implements OnInit {
         {
           icon: 'search',
           title: 'Pesquisar Produtores',
-          description: 'Encontre machambas e cooperativas próximas filtrando por província, produto e cultivo.',
-          color: '#E65100',
+          description: 'Encontre hortícolas, tubérculos e cereais diretamente das machambas de Gaza, Sofala, Sofala, etc.',
+          color: '#00695C',
           action: 'scrollToMarket'
         },
         {
           icon: 'shopping_cart',
-          title: 'Pedidos de Cotação',
-          description: 'Publique o que a sua empresa necessita para que produtores lhe façam ofertas directas.',
-          color: '#2E7D32',
+          title: 'Solicitar Cotação',
+          description: 'Publique as necessidades da sua empresa para que os produtores lhe enviem propostas de preço.',
+          color: '#3F51B5',
           action: 'openRequestModal'
         },
         ...commonCards
@@ -335,74 +379,127 @@ export class DashboardComponent implements OnInit {
       this.dashboardCards = [
         {
           icon: 'trending_up',
-          title: 'Projectos Agrícolas',
-          description: 'Analise fichas técnicas de machambas à procura de capital para estufas e furos de água.',
-          color: '#1565C0',
+          title: 'Oportunidades de Investimento',
+          description: 'Consulte projetos de irrigação, mecanização ou sementes selecionadas prontos a financiar.',
+          color: '#E65100',
           action: 'scrollToProjects'
         },
         {
-          icon: 'shield',
-          title: 'Garantias & Contratos',
-          description: 'Acompanhe os contratos inteligentes celebrados com produtores financiados.',
-          color: '#7B1FA2',
-          action: 'scrollToContracts'
+          icon: 'assignment',
+          title: 'Relatório Agregado',
+          description: 'Aceda à sua área exclusiva de análise e exporte dados agregados por região.',
+          color: '#2b78e4',
+          action: 'openRequestModal'
         },
         ...commonCards
       ];
     }
   }
 
-  private loadMockData(): void {
-    // Carrega dados simulados do localStorage se existirem, senão inicializa padrões
-    const isProdutor = this.user?.tipo === 'Produtor Individual' || this.user?.tipo === 'Cooperativa';
-    const isComprador = this.user?.tipo === 'Comprador';
-    const isInvestidor = this.user?.tipo === 'Investidor';
-
-    if (isProdutor) {
-      const localProposals = localStorage.getItem('alvor_buyer_proposals');
-      this.buyerProposals = localProposals ? JSON.parse(localProposals) : [
-        { id: 1, comprador: 'Supermercados VIP', produto: 'Tomate', quantidade: '2.0 Toneladas', precoOferecido: '42 MT/Kg', status: 'Pendente' },
-        { id: 2, comprador: 'Hotel Polana', produto: 'Cebola Vermelha', quantidade: '500 Kg', precoOferecido: '53 MT/Kg', status: 'Pendente' }
+  loadMockData(): void {
+    // Carregar Projetos de Investimento
+    const localProj = localStorage.getItem('alvor_invest_projects');
+    if (localProj) {
+      this.investmentProjects = JSON.parse(localProj);
+    } else {
+      this.investmentProjects = [
+        {
+          id: 501,
+          titulo: 'Sistema de Rega Gota-a-Gota no Bilene',
+          produtor: 'Mateus Tembe',
+          valorNecessario: 180000,
+          valorArrecadado: 120000,
+          categoria: 'Irrigação',
+          retorno: '18% a.a.',
+          descricao: 'Projeto de instalação de rega localizada para cultura intensiva de batata doce e cebola vermelha.'
+        },
+        {
+          id: 502,
+          titulo: 'Mecanização de Machamba de Milho',
+          produtor: 'Cooperativa de Chókwè',
+          valorNecessario: 450000,
+          valorArrecadado: 380000,
+          categoria: 'Equipamento',
+          retorno: '15% a.a.',
+          descricao: 'Aquisição de micro-tractor e alfaias para lavoura e sementeira mecanizada de 20 hectares.'
+        }
       ];
+      localStorage.setItem('alvor_invest_projects', JSON.stringify(this.investmentProjects));
     }
 
-    if (isComprador) {
-      const localRequests = localStorage.getItem('alvor_purchase_requests');
-      this.myPurchaseRequests = localRequests ? JSON.parse(localRequests) : [
-        { id: 1, produto: 'Batata Nacional', quantidade: '5 Toneladas', precoMaximo: '42 MT/Kg', status: 'Aberto', propostas: 3 },
-        { id: 2, produto: 'Pimento Amarelo', quantidade: '600 Kg', precoMaximo: '90 MT/Kg', status: 'Aberto', propostas: 1 }
+    // Carregar Carteira de Investimentos
+    const localInvested = localStorage.getItem('alvor_invested_projects');
+    if (localInvested) {
+      this.investedProjects = JSON.parse(localInvested);
+    } else {
+      this.investedProjects = [
+        {
+          id: 501,
+          titulo: 'Sistema de Rega Gota-a-Gota no Bilene',
+          investido: 50000,
+          retornoAcumulado: 4500,
+          progressoCultura: 65,
+          estagioCultura: 'Crescimento vegetativo',
+          previsaoColheita: 'Julho 2026'
+        }
       ];
+      localStorage.setItem('alvor_invested_projects', JSON.stringify(this.investedProjects));
     }
 
-    if (isInvestidor) {
-      const localProjects = localStorage.getItem('alvor_invest_projects');
-      this.investmentProjects = localProjects ? JSON.parse(localProjects) : [
-        { id: 1, titulo: 'Estufa Automatizada e Sensores', produtor: 'Mateus Tembe', valorNecessario: 250000, valorArrecadado: 175000, categoria: 'Tecnologia de Rega', retorno: '15% a.a.', descricao: 'Implementação de estufa com irrigação automatizada e sensores inteligentes para cultivo de tomate em Bilene.' },
-        { id: 2, titulo: 'Furo de Água Solar Cooperativo', produtor: 'Cooperativa de Chókwè', valorNecessario: 180000, valorArrecadado: 45000, categoria: 'Infraestrutura Hídrica', retorno: '12% a.a.', descricao: 'Bomba solar e canalização para irrigação sustentável de 5 hectares de arroz em Chókwè.' },
-        { id: 3, titulo: 'Câmara Fria Solar Pós-Colheita', produtor: 'Machamba de Namaacha', valorNecessario: 350000, valorArrecadado: 320000, categoria: 'Cadeia Fria & Logística', retorno: '18% a.a.', descricao: 'Câmara de frio alimentada a painéis solares para conservação de hortícolas finas antes do envio a Maputo.' }
+    // Propostas de Compradores
+    const localProposals = localStorage.getItem('alvor_buyer_proposals');
+    if (localProposals) {
+      this.buyerProposals = JSON.parse(localProposals);
+    } else {
+      this.buyerProposals = [
+        {
+          id: 301,
+          comprador: 'Supermercado Lúcia S.A.',
+          produto: 'Tomate Calibre A',
+          quantidade: '2.5 Toneladas',
+          precoOferecido: '43.00 MT/Kg',
+          status: 'Pendente'
+        },
+        {
+          id: 302,
+          comprador: 'Restaurante Costa do Sol',
+          produto: 'Cebola Vermelha',
+          quantidade: '500 Kg',
+          precoOferecido: '52.50 MT/Kg',
+          status: 'Pendente'
+        }
       ];
+      localStorage.setItem('alvor_buyer_proposals', JSON.stringify(this.buyerProposals));
+    }
 
-      const localInvested = localStorage.getItem('alvor_invested_projects');
-      this.investedProjects = localInvested ? JSON.parse(localInvested) : [
-        { id: 1, titulo: 'Estufa Automatizada e Sensores', investido: 50000, retornoAcumulado: 4120, progressoCultura: 75, estagioCultura: 'Frutificação / Maturação', previsaoColheita: 'Julho 2026' }
+    // Pedidos de Cotação do Comprador
+    const localReqs = localStorage.getItem('alvor_purchase_requests');
+    if (localReqs) {
+      this.myPurchaseRequests = JSON.parse(localReqs);
+    } else {
+      this.myPurchaseRequests = [
+        {
+          id: 401,
+          produto: 'Milho Branco Moçambicano',
+          quantidade: '8 Toneladas',
+          precoMaximo: '26.00 MT/Kg',
+          status: 'Aberto',
+          propostas: 3
+        }
       ];
+      localStorage.setItem('alvor_purchase_requests', JSON.stringify(this.myPurchaseRequests));
     }
   }
 
   loadOffers(): void {
-    if (!this.user) return;
-    const isProdutor = this.user.tipo === 'Produtor Individual' || this.user.tipo === 'Cooperativa';
-    if (isProdutor) {
-      this.produtorOffers = this.offerService.getProducerOffers(this.user.id);
-    } else {
-      this.availableOffers = this.offerService.getPublicOffers();
-    }
+    this.produtorOffers = this.offerService.getOffers().filter(o => o.produtorId === this.user?.id);
+    this.availableOffers = this.offerService.getPublicOffers();
   }
 
   onProvinceChange(): void {
     if (this.newOffer.provincia) {
       this.districtsList = this.locationService.getDistrictsForProvince(this.newOffer.provincia);
-      this.newOffer.distrito = ''; // Reset distrito
+      this.newOffer.distrito = '';
     } else {
       this.districtsList = [];
     }
@@ -415,7 +512,6 @@ export class DashboardComponent implements OnInit {
     }
 
     this.loadingLocation = true;
-    this.locationDenied = false;
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -429,7 +525,6 @@ export class DashboardComponent implements OnInit {
       },
       (error) => {
         this.loadingLocation = false;
-        this.locationDenied = true;
         this.snack.open('Permissão de localização negada ou indisponível. Seleccione no mapa manualmente.', 'OK', {
           duration: 4000
         });
@@ -522,7 +617,6 @@ export class DashboardComponent implements OnInit {
     this.showOfferModal = true;
   }
 
-  // Ações Gerais
   getUserTypeIcon(): string {
     const tipo = this.user?.tipo;
     if (tipo === 'Produtor Individual' || tipo === 'Cooperativa') {
@@ -702,7 +796,6 @@ export class DashboardComponent implements OnInit {
     this.sentInterests = this.interestService.getSentInterests(this.user.id);
   }
 
-  // RF-35, RF-36
   acceptInterest(interest: Interest): void {
     try {
       this.interestService.acceptInterest(interest.id);
@@ -710,7 +803,6 @@ export class DashboardComponent implements OnInit {
         duration: 4000,
         panelClass: ['snackbar-success']
       });
-      // Atualizar conexões
       this.connections.unshift({
         produtor: this.user?.nome || 'Eu',
         consumidor: interest.compradorNome,
@@ -726,7 +818,6 @@ export class DashboardComponent implements OnInit {
     }
   }
 
-  // RF-35
   refuseInterest(interest: Interest): void {
     try {
       this.interestService.refuseInterest(interest.id);
@@ -765,7 +856,6 @@ export class DashboardComponent implements OnInit {
       panelClass: ['snackbar-success']
     });
 
-    // Simula proposta entrando nas propostas recebidas se o produtor local estivesse logado
     const localProposals = localStorage.getItem('alvor_buyer_proposals');
     const proposalsList: BuyerProposal[] = localProposals ? JSON.parse(localProposals) : [];
     proposalsList.unshift({
@@ -826,7 +916,6 @@ export class DashboardComponent implements OnInit {
       proj.valorArrecadado += Number(this.investAmount);
       localStorage.setItem('alvor_invest_projects', JSON.stringify(this.investmentProjects));
 
-      // Adiciona ao portfolio de projetos financiados pelo investidor
       const existing = this.investedProjects.find(ip => ip.id === proj.id);
       if (existing) {
         existing.investido += Number(this.investAmount);
@@ -853,9 +942,6 @@ export class DashboardComponent implements OnInit {
     this.selectedProjectForInvestment = null;
   }
 
-  // ==========================================
-  // OUTRAS UTILIDADES
-  // ==========================================
   get filteredPrices(): PriceTicker[] {
     if (!this.priceSearch) return this.prices;
     return this.prices.filter(p => p.produto.toLowerCase().includes(this.priceSearch.toLowerCase()));
@@ -869,43 +955,27 @@ export class DashboardComponent implements OnInit {
   // ==========================================
   // AÇÕES DE AVALIAÇÃO E REPUTAÇÃO (MODULO 5)
   // ==========================================
-
-  // RF-39: Transações prontas a confirmar conclusão (passados 7 dias ou simulado)
   get pendingConfirmations(): Interest[] {
     if (!this.user) return [];
-    
-    // Todos os interesses aceites relacionados com o utilizador
     const myInterests = this.receivedInterests.concat(this.sentInterests);
     
     return myInterests.filter(i => {
       if (i.status !== 'Aceite') return false;
+      if (this.user!.id === i.compradorId && i.compradorConfirmou !== null && i.compradorConfirmou !== undefined) return false;
+      if (this.user!.id === i.produtorId && i.produtorConfirmou !== null && i.produtorConfirmou !== undefined) return false;
 
-      // Se for o comprador, verificar se ele já confirmou/recusou a transação
-      if (this.user!.id === i.compradorId && i.compradorConfirmou !== null && i.compradorConfirmou !== undefined) {
-        return false;
-      }
-
-      // Se for o produtor, verificar se ele já confirmou/recusou a transação
-      if (this.user!.id === i.produtorId && i.produtorConfirmou !== null && i.produtorConfirmou !== undefined) {
-        return false;
-      }
-
-      // Validar os 7 dias de carência (tempo simulado ou real)
       const dataAceite = i.dataAceite || i.dataInteresse;
       const seteDias = 7 * 24 * 60 * 60 * 1000;
       return (Date.now() - dataAceite) >= seteDias;
     });
   }
 
-  // Transações prontas para avaliar (já confirmou "Sim" mas ainda não avaliou)
   get pendingEvaluationsList(): Interest[] {
     if (!this.user) return [];
-    
     const myInterests = this.receivedInterests.concat(this.sentInterests);
     
     return myInterests.filter(i => {
       if (i.status !== 'Aceite') return false;
-
       if (this.user!.id === i.compradorId) {
         return i.compradorConfirmou === true && !i.compradorAvaliou;
       } else if (this.user!.id === i.produtorId) {
@@ -915,7 +985,6 @@ export class DashboardComponent implements OnInit {
     });
   }
 
-  // RF-40: Confirmação de conclusão de transação
   confirmCompletion(interest: Interest, confirmed: boolean): void {
     if (!this.user) return;
     try {
@@ -937,7 +1006,6 @@ export class DashboardComponent implements OnInit {
     }
   }
 
-  // RF-39: Simulação de carência de 7 dias
   simulateTimePassed(interest: Interest): void {
     this.interestService.simulateSevenDaysPassed(interest.id);
     this.snack.open('Tempo adiantado: A transação foi colocada há mais de 7 dias no passado.', 'Excelente', {
@@ -954,7 +1022,6 @@ export class DashboardComponent implements OnInit {
     this.showEvaluationModal = true;
   }
 
-  // RF-40: Submeter avaliação com estrelas e comentário
   submeterAvaliacao(): void {
     if (!this.selectedInterestForEvaluation || !this.user) return;
 
@@ -991,15 +1058,15 @@ export class DashboardComponent implements OnInit {
     }
   }
 
-  // RF-44: Administrador - carregar dados de moderação
+  // RF-44 & RF-50: Administrador - carregar dados de moderação e consola global
   loadAdminData(): void {
     if (this.user?.isAdmin) {
       this.reportedEvaluations = this.evaluationService.getReportedEvaluations();
       this.allEvaluations = this.evaluationService.getAllEvaluations();
+      this.loadAdminPanelData();
     }
   }
 
-  // RF-44: Denunciar avaliação como ofensiva ou fraudulenta
   abrirModalReportar(evaluationId: number): void {
     this.evaluationToReportId = evaluationId;
     this.reportReason = '';
@@ -1016,10 +1083,17 @@ export class DashboardComponent implements OnInit {
     this.loadAdminData();
   }
 
-  // RF-44: Administrador - remover avaliação
   removerAvaliacao(evaluationId: number): void {
     if (!this.user?.isAdmin) return;
     this.evaluationService.removeEvaluation(evaluationId);
+    
+    // Log de auditoria para remoção de avaliação
+    this.adminService.logAction(
+      this.user.nome,
+      'Removeu Avaliação',
+      `ID da Avaliação: ${evaluationId}`
+    );
+
     this.snack.open('Avaliação removida permanentemente do sistema.', 'Painel Admin', {
       duration: 3000,
       panelClass: ['snackbar-success']
@@ -1031,7 +1105,6 @@ export class DashboardComponent implements OnInit {
   // ==========================================
   // 4. AÇÕES DE INVESTIDOR (MÓDULO 6)
   // ==========================================
-
   get aggregatedOffers(): Array<{
     produto: string;
     provincia: string;
@@ -1042,45 +1115,34 @@ export class DashboardComponent implements OnInit {
   }> {
     const allActiveOffers = this.offerService.getPublicOffers();
     
-    // Filtrar ofertas ativas
     const filtered = allActiveOffers.filter(offer => {
-      // Filtrar por produto
       if (this.investorFilters.produto !== 'Todos' && offer.produto !== this.investorFilters.produto) {
         return false;
       }
       
-      // Quantidade normalizada em Kg
       const qtyInKg = offer.unidade === 'ton' ? offer.quantidade * 1000 : offer.quantidade;
       
-      // Filtrar por quantidade mínima
       if (this.investorFilters.quantidadeMin !== null && this.investorFilters.quantidadeMin !== undefined && qtyInKg < this.investorFilters.quantidadeMin) {
         return false;
       }
-      // Filtrar por quantidade máxima
       if (this.investorFilters.quantidadeMax !== null && this.investorFilters.quantidadeMax !== undefined && qtyInKg > this.investorFilters.quantidadeMax) {
         return false;
       }
       
-      // Filtrar por período de disponibilidade
       if (this.investorFilters.dataInicio) {
         const filterStart = new Date(this.investorFilters.dataInicio);
         const offerEnd = new Date(offer.dataFim);
-        if (offerEnd < filterStart) {
-          return false;
-        }
+        if (offerEnd < filterStart) return false;
       }
       if (this.investorFilters.dataFim) {
         const filterEnd = new Date(this.investorFilters.dataFim);
         const offerStart = new Date(offer.dataInicio);
-        if (offerStart > filterEnd) {
-          return false;
-        }
+        if (offerStart > filterEnd) return false;
       }
       
       return true;
     });
     
-    // Agregar por produto e distrito
     const map = new Map<string, {
       produto: string;
       provincia: string;
@@ -1110,7 +1172,6 @@ export class DashboardComponent implements OnInit {
       }
     });
     
-    // Formatar volumes
     const result = Array.from(map.values());
     result.forEach(r => {
       if (r.volumeTotalKg >= 1000) {
@@ -1120,7 +1181,6 @@ export class DashboardComponent implements OnInit {
       }
     });
     
-    // Ordenar por volume total decrescente
     return result.sort((a, b) => b.volumeTotalKg - a.volumeTotalKg);
   }
 
@@ -1189,8 +1249,16 @@ export class DashboardComponent implements OnInit {
         duration: 3000,
         panelClass: ['snackbar-success']
       });
+
+      // Salvar a solicitação no serviço de administração
+      this.adminService.createReportRequest(
+        this.user!.id,
+        this.user!.nome,
+        this.customReportRequest.tema,
+        this.customReportRequest.detalhes,
+        this.customReportRequest.telefoneMpesa
+      );
       
-      // Exibe no console o email simulado gerado para o administrador
       console.log('--- EMAIL SIMULADO AO ADMINISTRADOR ---');
       console.log('Para: admin@alvorfield.co.mz');
       console.log('Assunto: Pedido de Relatório Personalizado - Pago via M-Pesa');
@@ -1199,7 +1267,266 @@ export class DashboardComponent implements OnInit {
       console.log(`Detalhes: ${this.customReportRequest.detalhes}`);
       console.log(`Pagamento M-Pesa: Confirmado (Telefone: ${this.customReportRequest.telefoneMpesa})`);
       console.log('---------------------------------------');
+
+      this.loadAdminData();
     }, 2000);
   }
-}
 
+  // ==========================================================
+  // MÓDULO 7: GESTÃO DO PAINEL DE ADMINISTRAÇÃO (RF-50 A RF-56)
+  // ==========================================================
+  
+  loadAdminPanelData(): void {
+    // RF-50: Visão completa de todos os utilizadores, ofertas, interesses e avaliações
+    this.adminUsers = this.authService.getAllUsersWithDeleted();
+    this.adminOffers = this.offerService.getOffers();
+    
+    // Ler interesses em localStorage de forma global
+    const localInts = localStorage.getItem('alvorfield_interests');
+    this.adminInterests = localInts ? JSON.parse(localInts) : [];
+    
+    this.adminEvaluations = this.evaluationService.getAllEvaluations();
+    this.adminAuditLogs = this.adminService.getAuditLogs();
+    this.adminReportRequests = this.adminService.getReportRequests();
+
+    // RF-53: Calcular estatísticas dinâmicas
+    this.calculateAdminStats();
+  }
+
+  private calculateAdminStats(): void {
+    // Número de utilizadores por tipo
+    const typeCounts: { [key: string]: number } = {
+      'Produtor Individual': 0,
+      'Cooperativa': 0,
+      'Comprador': 0,
+      'Investidor': 0
+    };
+    let activeUserCount = 0;
+    this.adminUsers.forEach(u => {
+      if (u.status !== 'Eliminado') {
+        typeCounts[u.tipo] = (typeCounts[u.tipo] || 0) + 1;
+        activeUserCount++;
+      }
+    });
+
+    // Ofertas por estado
+    const stateCounts: { [key: string]: number } = {
+      'Activa': 0,
+      'Pausada': 0,
+      'Expirada': 0,
+      'Concluída': 0,
+      'Rascunho': 0
+    };
+    this.adminOffers.forEach(o => {
+      stateCounts[o.estado] = (stateCounts[o.estado] || 0) + 1;
+    });
+
+    // Interesses criados na última semana (tempo simulado ou real)
+    const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const weekInterests = this.adminInterests.filter(i => i.dataInteresse >= sevenDaysAgo).length;
+
+    this.adminStats = {
+      totalUsers: activeUserCount,
+      totalOffers: this.adminOffers.length,
+      totalInterests: this.adminInterests.length,
+      totalEvaluations: this.adminEvaluations.length,
+      usersByType: typeCounts,
+      offersByState: stateCounts,
+      interestsPerWeek: weekInterests
+    };
+  }
+
+  // RF-51: Activar, Suspender ou Eliminar qualquer conta de utilizador
+  alterarEstadoUtilizador(userId: number, novoEstado: 'Activo' | 'Suspenso' | 'Eliminado'): void {
+    if (!this.user?.isAdmin) return;
+    
+    const targetUser = this.adminUsers.find(u => u.id === userId);
+    if (!targetUser) return;
+
+    try {
+      this.authService.updateUserStatus(userId, novoEstado);
+      
+      // Log de Auditoria
+      this.adminService.logAction(
+        this.user.nome,
+        `${novoEstado === 'Activo' ? 'Activou' : novoEstado === 'Suspenso' ? 'Suspendeu' : 'Eliminou'} Utilizador`,
+        `Utilizador: ${targetUser.nome} (${targetUser.tipo}), Telefone: ${targetUser.telefone}`
+      );
+
+      this.snack.open(
+        `Estado da conta de ${targetUser.nome} alterado para "${novoEstado}" com sucesso.`, 
+        'Sucesso', 
+        { duration: 3000, panelClass: ['snackbar-success'] }
+      );
+      this.loadAdminPanelData();
+    } catch (e: any) {
+      this.snack.open(e.message || 'Erro ao alterar estado.', 'Erro', { duration: 3000 });
+    }
+  }
+
+  // RF-52: Adicionar novo produto
+  adminAdicionarProduto(): void {
+    if (!this.user?.isAdmin || !this.newProductInput.trim()) return;
+
+    try {
+      this.adminService.addProduct(this.newProductInput, this.user.nome);
+      this.newProductInput = '';
+      this.productsList = this.offerService.PREDEFINED_PRODUCTS; // Recarregar a lista reativa
+      this.snack.open('Produto adicionado à lista do sistema com sucesso!', 'Excelente', {
+        duration: 3000,
+        panelClass: ['snackbar-success']
+      });
+      this.loadAdminPanelData();
+    } catch (e: any) {
+      this.snack.open(e.message || 'Erro ao adicionar produto.', 'Erro', { duration: 3000 });
+    }
+  }
+
+  // RF-52: Abrir modal para renomear produto
+  abrirModalEditarProduto(oldName: string): void {
+    this.editingProductOldName = oldName;
+    this.editingProductNewName = oldName;
+    this.showProductEditModal = true;
+  }
+
+  salvarEdicaoProduto(): void {
+    if (!this.user?.isAdmin || !this.editingProductNewName.trim()) return;
+
+    try {
+      this.adminService.editProduct(this.editingProductOldName, this.editingProductNewName, this.user.nome);
+      this.showProductEditModal = false;
+      this.productsList = this.offerService.PREDEFINED_PRODUCTS; // Recarregar a lista reativa
+      this.snack.open('Produto renomeado com sucesso!', 'Excelente', {
+        duration: 3000,
+        panelClass: ['snackbar-success']
+      });
+      this.loadAdminPanelData();
+    } catch (e: any) {
+      this.snack.open(e.message || 'Erro ao renomear produto.', 'Erro', { duration: 3000 });
+    }
+  }
+
+  // RF-52: Remover produto
+  adminRemoverProduto(name: string): void {
+    if (!this.user?.isAdmin) return;
+
+    try {
+      this.adminService.deleteProduct(name, this.user.nome);
+      this.productsList = this.offerService.PREDEFINED_PRODUCTS; // Recarregar a lista reativa
+      this.snack.open('Produto removido do sistema com sucesso.', 'OK', {
+        duration: 3000,
+        panelClass: ['snackbar-success']
+      });
+      this.loadAdminPanelData();
+    } catch (e: any) {
+      this.snack.open(e.message || 'Erro ao remover produto.', 'Erro', { duration: 3000 });
+    }
+  }
+
+  // RF-55: Forçar expiração de qualquer oferta
+  adminForcarExpiracaoOferta(offerId: number): void {
+    if (!this.user?.isAdmin) return;
+
+    const offer = this.adminOffers.find(o => o.id === offerId);
+    if (!offer) return;
+
+    try {
+      this.offerService.adminForceExpire(offerId);
+      
+      this.adminService.logAction(
+        this.user.nome,
+        'Forçou Expiração de Oferta',
+        `Oferta ID: ${offer.id}, Produtor: ${offer.produtorNome}, Cultura: ${offer.produto}`
+      );
+
+      this.snack.open('Expiração da oferta forçada com sucesso!', 'OK', {
+        duration: 3000,
+        panelClass: ['snackbar-success']
+      });
+      
+      this.loadOffers();
+      this.loadAdminPanelData();
+    } catch (e: any) {
+      this.snack.open(e.message || 'Erro ao expirar oferta.', 'Erro', { duration: 3000 });
+    }
+  }
+
+  // RF-55: Abrir modal de edição de oferta para o admin
+  abrirModalAdminEditarOferta(offer: Offer): void {
+    this.selectedOfferForAdminEdit = offer;
+    this.adminOfferEditForm = {
+      produto: offer.produto,
+      quantidade: offer.quantidade,
+      unidade: offer.unidade,
+      precoUnitario: offer.precoUnitario,
+      dataFim: offer.dataFim,
+      provincia: offer.provincia,
+      distrito: offer.distrito
+    };
+    this.showAdminOfferEditModal = true;
+  }
+
+  salvarAdminEdicaoOferta(): void {
+    if (!this.user?.isAdmin || !this.selectedOfferForAdminEdit) return;
+
+    try {
+      this.offerService.updateOffer(this.selectedOfferForAdminEdit.id, this.adminOfferEditForm);
+      
+      this.adminService.logAction(
+        this.user.nome,
+        'Editou Oferta Administrativamente',
+        `Oferta ID: ${this.selectedOfferForAdminEdit.id}, Produtor: ${this.selectedOfferForAdminEdit.produtorNome}, Cultura: ${this.adminOfferEditForm.produto}`
+      );
+
+      this.snack.open('Oferta editada pelo administrador com sucesso!', 'Excelente', {
+        duration: 3000,
+        panelClass: ['snackbar-success']
+      });
+
+      this.showAdminOfferEditModal = false;
+      this.selectedOfferForAdminEdit = null;
+      this.loadOffers();
+      this.loadAdminPanelData();
+    } catch (e: any) {
+      this.snack.open(e.message || 'Erro ao salvar alterações da oferta.', 'Erro', { duration: 3000 });
+    }
+  }
+
+  // RF-54: Responder a pedidos de relatório de investidores (enviar CSV por email) - função manual
+  abrirModalResponderRelatorio(request: ReportRequest): void {
+    this.selectedReportRequestForResponse = request;
+    
+    // Auto-preencher o corpo do CSV de amostra com dados de mercado simulados baseados no tema solicitado
+    this.adminReportResponseText = `Produto,Região,Distrito,Volume Total (Kg),Preço Médio SIMA (MT/Kg),Ofertas Ativas\n` +
+      `Tomate Vermelho,Gaza,Bilene,12500,45.00,5\n` +
+      `Cebola Vermelha,Gaza,Bilene,8200,55.00,3\n` +
+      `Milho Branco,Sofala,Búzi,24000,24.00,4\n` +
+      `Batata Doce,Maputo Província,Namaacha,15000,35.00,6`;
+      
+    this.showAdminReportResponseModal = true;
+  }
+
+  enviarRelatorioInvestidor(): void {
+    if (!this.user?.isAdmin || !this.selectedReportRequestForResponse || !this.adminReportResponseText.trim()) return;
+
+    try {
+      this.adminService.respondToReportRequest(
+        this.selectedReportRequestForResponse.id,
+        this.adminReportResponseText,
+        this.user.nome
+      );
+
+      this.snack.open(
+        `Relatório enviado com sucesso por e-mail para o investidor ${this.selectedReportRequestForResponse.investidorNome}!`,
+        'Enviado',
+        { duration: 4000, panelClass: ['snackbar-success'] }
+      );
+
+      this.showAdminReportResponseModal = false;
+      this.selectedReportRequestForResponse = null;
+      this.loadAdminPanelData();
+    } catch (e: any) {
+      this.snack.open(e.message || 'Erro ao enviar relatório.', 'Erro', { duration: 3000 });
+    }
+  }
+}
