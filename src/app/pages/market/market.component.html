@@ -207,7 +207,12 @@
                 </div>
 
                 <h3 class="product-title">{{ offer.produto }}</h3>
-                <span class="producer-name">Produtor: <strong>{{ offer.produtorNome }}</strong></span>
+                <span class="producer-name" style="display: flex; align-items: center; gap: 4px; flex-wrap: wrap;">
+                  Produtor: <strong>{{ offer.produtorNome }}</strong>
+                  <span style="color: #b58200; font-size: 0.8rem; font-weight: bold; display: inline-flex; align-items: center; gap: 2px; background: rgba(255,193,7,0.15); padding: 1px 6px; border-radius: 8px;">
+                    ⭐ {{ offer.produtorReputacao }}
+                  </span>
+                </span>
 
                 <div class="offer-specs-row">
                   <div class="spec-block">

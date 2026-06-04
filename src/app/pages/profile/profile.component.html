@@ -10,11 +10,21 @@
         </div>
         <div class="user-meta-details">
           <h2>{{ currentUser?.nome }}</h2>
-          <div class="badges-row">
+          <div class="badges-row" style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
             <span class="badge-role">{{ currentUser?.tipo }}</span>
             <span class="badge-location">
               <mat-icon>place</mat-icon>
               {{ currentUser?.provincia }}, {{ currentUser?.distrito }}
+            </span>
+            <span class="badge-reputation" style="display: inline-flex; align-items: center; background: rgba(255,255,255,0.25); color: #fff; padding: 2px 8px; border-radius: 12px; font-weight: bold; font-size: 0.8rem; gap: 2px; border: 1px solid rgba(255,255,255,0.3);">
+              <mat-icon style="font-size: 14px; width: 14px; height: 14px; color: #ffeb3b; display: inline-flex; align-items: center; justify-content: center;">star</mat-icon>
+              {{ evaluationService.getUserReputation(currentUser?.id || 0).average }} 
+              <span style="font-weight: normal; opacity: 0.9; font-size: 0.75rem;">
+                ({{ evaluationService.getUserReputation(currentUser?.id || 0).total }} avaliações)
+              </span>
+              <span style="margin-left: 4px; padding-left: 4px; border-left: 1px solid rgba(255,255,255,0.3); font-weight: bold;">
+                💼 {{ evaluationService.getCompletedTransactionsCount(currentUser?.id || 0) }} concluídas
+              </span>
             </span>
           </div>
         </div>
@@ -209,6 +219,86 @@
 
       </form>
     </mat-card>
+    
+    <!-- Histórico de Avaliações Recebidas -->
+    <mat-card class="profile-mat-card" style="margin-top: 24px;">
+      <div class="card-header" style="border-bottom: 1px solid #f1f5f9; padding-bottom: 12px; margin-bottom: 16px;">
+        <h3>Avaliações Recebidas ({{ reviews.length }})</h3>
+        <p>Histórico de reputação e comentários deixados por outros produtores e compradores com quem negociou.</p>
+      </div>
+
+      @if (reviews.length === 0) {
+        <div style="text-align: center; padding: 30px; color: #64748b;">
+          <mat-icon style="font-size: 48px; width: 48px; height: 48px; color: #cbd5e1; margin-bottom: 8px;">star_outline</mat-icon>
+          <p>Ainda não possui avaliações no sistema.</p>
+        </div>
+      } @else {
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+          @for (rev of reviews; track rev.id) {
+            <div style="border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; background: #fafafa;">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px;">
+                <div>
+                  <strong style="color: #1e293b;">{{ rev.fromUserName }}</strong>
+                  <div style="display: flex; align-items: center; gap: 2px; margin-top: 4px;">
+                    @for (star of [1,2,3,4,5]; track star) {
+                      <mat-icon style="font-size: 16px; width: 16px; height: 16px;" [style.color]="star <= rev.rating ? '#ffb300' : '#cbd5e1'">star</mat-icon>
+                    }
+                  </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="font-size: 0.8rem; color: #94a3b8;">{{ rev.dataCriacao | date:'dd/MM/yyyy HH:mm' }}</span>
+                  @if (!rev.denunciada) {
+                    <button mat-icon-button color="warn" title="Denunciar Avaliação" (click)="abrirModalReportar(rev.id)" style="width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;">
+                      <mat-icon style="font-size: 18px; width: 18px; height: 18px;">flag</mat-icon>
+                    </button>
+                  } @else {
+                    <span style="color: #ef4444; font-size: 0.8rem; font-weight: bold; display: inline-flex; align-items: center; gap: 2px;">
+                      <mat-icon style="font-size: 14px; width: 14px; height: 14px;">report</mat-icon> Denunciada
+                    </span>
+                  }
+                </div>
+              </div>
+
+              <p style="margin: 10px 0 0; font-size: 0.9rem; color: #334155; font-style: italic; line-height: 1.4;">
+                "{{ rev.comentario || 'Sem comentário.' }}"
+              </p>
+            </div>
+          }
+        </div>
+      }
+    </mat-card>
+
+    <!-- Modal de Denúncia -->
+    <div class="modal-overlay" *ngIf="showReportModal" style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center;">
+      <div style="background: white; border-radius: 16px; padding: 24px; max-width: 450px; width: 90%; box-shadow: 0 10px 25px rgba(0,0,0,0.15);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #f1f5f9; padding-bottom: 12px;">
+          <h3 style="font-size: 1.2rem; font-weight: 800; color: #991b1b; margin: 0; display: flex; align-items: center; gap: 6px;">
+            <mat-icon style="color: #ef4444;">report</mat-icon> Denunciar Avaliação
+          </h3>
+          <button (click)="showReportModal = false" style="background: none; border: none; cursor: pointer; color: #64748b; display: flex; align-items: center;"><mat-icon>close</mat-icon></button>
+        </div>
+
+        <div>
+          <p style="font-size: 0.9rem; color: #64748b; margin-bottom: 16px; line-height: 1.5;">
+            Por favor, indique a razão pela qual considera esta avaliação inadequada, ofensiva ou fraudulenta.
+          </p>
+
+          <div style="margin-bottom: 16px; display: flex; flex-direction: column; gap: 6px;">
+            <label style="font-weight: 600; display: block; font-size: 0.85rem; color: #334155;">
+              Motivo da Denúncia *
+            </label>
+            <textarea [(ngModel)]="reportReason" placeholder="Indique o motivo detalhado (ex: linguagem ofensiva, informação falsa, difamação...)" 
+                      style="width: 100%; min-height: 90px; padding: 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-family: inherit; font-size: 0.9rem; box-sizing: border-box; resize: vertical; outline: none; transition: border-color 0.2s;"
+                      onfocus="this.style.borderColor='#ef4444'"></textarea>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 12px; border-top: 1px solid #f1f5f9; padding-top: 16px; margin-top: 12px;">
+          <button mat-button (click)="showReportModal = false">Cancelar</button>
+          <button mat-flat-button color="warn" style="font-weight: bold; border-radius: 8px;" [disabled]="!reportReason" (click)="submeterDenuncia()">Submeter Denúncia</button>
+        </div>
+      </div>
+    </div>
 
   </div>
 </div>

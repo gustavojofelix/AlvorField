@@ -1,5 +1,7 @@
-import { Injectable } from '@angular/core';
+import { Injectable, Injector } from '@angular/core';
 import { AuthService } from './auth.service';
+import { EvaluationService } from './evaluation.service';
+
 
 export type OfferStatus = 'Activa' | 'Pausada' | 'Expirada' | 'Concluída' | 'Rascunho';
 
@@ -45,7 +47,10 @@ export class OfferService {
     'Cebola Vermelha'
   ];
 
-  constructor(private authService: AuthService) {
+  constructor(
+    private authService: AuthService,
+    private injector: Injector
+  ) {
     this.initializeMockOffers();
     this.verificarEExpirarOfertas();
   }
@@ -209,7 +214,23 @@ export class OfferService {
   getOffers(): Offer[] {
     this.verificarEExpirarOfertas();
     const data = localStorage.getItem(this.OFFERS_KEY);
-    return data ? JSON.parse(data) : [];
+    const offers: Offer[] = data ? JSON.parse(data) : [];
+
+    try {
+      const evaluationService = this.injector.get(EvaluationService);
+      offers.forEach(o => {
+        const rep = evaluationService.getUserReputation(o.produtorId);
+        o.produtorReputacao = rep.average;
+        
+        const count = evaluationService.getCompletedTransactionsCount(o.produtorId);
+        const baseline = o.produtorId === 1 ? 14 : (o.produtorId === 101 ? 32 : (o.produtorId === 102 ? 22 : 8));
+        o.produtorTransacoes = baseline + count;
+      });
+    } catch (e) {
+      // Evita erros de dependência circular durante a inicialização inicial
+    }
+
+    return offers;
   }
 
   getProducerOffers(producerId: number): Offer[] {

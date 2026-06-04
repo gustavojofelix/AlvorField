@@ -6,6 +6,7 @@ import { AuthService, User } from '../../services/auth.service';
 import { LocationService, Province } from '../../services/location.service';
 import { OfferService, Offer, OfferStatus } from '../../services/offer.service';
 import { InterestService, Interest } from '../../services/interest.service';
+import { EvaluationService, Evaluation } from '../../services/evaluation.service';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -17,6 +18,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTabsModule } from '@angular/material/tabs';
+
 
 interface Connection {
   produtor: string;
@@ -107,6 +109,20 @@ export class DashboardComponent implements OnInit {
   showInvestModal = false;
   showDeleteConfirmModal = false;
   offerToDeleteId: number | null = null;
+
+  // Reputação e Avaliação Modais
+  showEvaluationModal = false;
+  selectedInterestForEvaluation: Interest | null = null;
+  evalRating = 5;
+  evalComment = '';
+  
+  // Denúncias e Moderação
+  showReportModal = false;
+  evaluationToReportId: number | null = null;
+  reportReason = '';
+  reportedEvaluations: Evaluation[] = [];
+  allEvaluations: Evaluation[] = [];
+
 
   // Form de Oferta
   newOffer = {
@@ -211,6 +227,7 @@ export class DashboardComponent implements OnInit {
     private locationService: LocationService,
     private offerService: OfferService,
     private interestService: InterestService,
+    public evaluationService: EvaluationService,
     private router: Router,
     private snack: MatSnackBar
   ) {}
@@ -224,6 +241,7 @@ export class DashboardComponent implements OnInit {
     this.loadMockData();
     this.loadOffers();
     this.loadInterests();
+    this.loadAdminData();
   }
 
   private setGreeting(): void {
@@ -826,6 +844,168 @@ export class DashboardComponent implements OnInit {
   logout(): void {
     this.authService.logout();
     this.snack.open('Sessão terminada.', 'Fechar', { duration: 2500 });
+  }
+
+  // ==========================================
+  // AÇÕES DE AVALIAÇÃO E REPUTAÇÃO (MODULO 5)
+  // ==========================================
+
+  // RF-39: Transações prontas a confirmar conclusão (passados 7 dias ou simulado)
+  get pendingConfirmations(): Interest[] {
+    if (!this.user) return [];
+    
+    // Todos os interesses aceites relacionados com o utilizador
+    const myInterests = this.receivedInterests.concat(this.sentInterests);
+    
+    return myInterests.filter(i => {
+      if (i.status !== 'Aceite') return false;
+
+      // Se for o comprador, verificar se ele já confirmou/recusou a transação
+      if (this.user!.id === i.compradorId && i.compradorConfirmou !== null && i.compradorConfirmou !== undefined) {
+        return false;
+      }
+
+      // Se for o produtor, verificar se ele já confirmou/recusou a transação
+      if (this.user!.id === i.produtorId && i.produtorConfirmou !== null && i.produtorConfirmou !== undefined) {
+        return false;
+      }
+
+      // Validar os 7 dias de carência (tempo simulado ou real)
+      const dataAceite = i.dataAceite || i.dataInteresse;
+      const seteDias = 7 * 24 * 60 * 60 * 1000;
+      return (Date.now() - dataAceite) >= seteDias;
+    });
+  }
+
+  // Transações prontas para avaliar (já confirmou "Sim" mas ainda não avaliou)
+  get pendingEvaluationsList(): Interest[] {
+    if (!this.user) return [];
+    
+    const myInterests = this.receivedInterests.concat(this.sentInterests);
+    
+    return myInterests.filter(i => {
+      if (i.status !== 'Aceite') return false;
+
+      if (this.user!.id === i.compradorId) {
+        return i.compradorConfirmou === true && !i.compradorAvaliou;
+      } else if (this.user!.id === i.produtorId) {
+        return i.produtorConfirmou === true && !i.produtorAvaliou;
+      }
+      return false;
+    });
+  }
+
+  // RF-40: Confirmação de conclusão de transação
+  confirmCompletion(interest: Interest, confirmed: boolean): void {
+    if (!this.user) return;
+    try {
+      this.interestService.confirmTransaction(interest.id, this.user.id, confirmed);
+      if (confirmed) {
+        this.snack.open('Marcou como Concluída! Por favor, avalie o seu parceiro comercial.', 'OK', {
+          duration: 4000,
+          panelClass: ['snackbar-success']
+        });
+        this.abrirModalAvaliacao(interest);
+      } else {
+        this.snack.open('Respondeu "Não" à conclusão da transação.', 'OK', { duration: 3000 });
+      }
+      this.loadInterests();
+      this.loadOffers();
+      this.loadAdminData();
+    } catch (e: any) {
+      this.snack.open(e.message || 'Erro ao processar resposta.', 'Erro', { duration: 3000 });
+    }
+  }
+
+  // RF-39: Simulação de carência de 7 dias
+  simulateTimePassed(interest: Interest): void {
+    this.interestService.simulateSevenDaysPassed(interest.id);
+    this.snack.open('Tempo adiantado: A transação foi colocada há mais de 7 dias no passado.', 'Excelente', {
+      duration: 3500,
+      panelClass: ['snackbar-success']
+    });
+    this.loadInterests();
+  }
+
+  abrirModalAvaliacao(interest: Interest): void {
+    this.selectedInterestForEvaluation = interest;
+    this.evalRating = 5;
+    this.evalComment = '';
+    this.showEvaluationModal = true;
+  }
+
+  // RF-40: Submeter avaliação com estrelas e comentário
+  submeterAvaliacao(): void {
+    if (!this.selectedInterestForEvaluation || !this.user) return;
+
+    const interest = this.selectedInterestForEvaluation;
+    const isComprador = this.user.id === interest.compradorId;
+    const toUserId = isComprador ? interest.produtorId : interest.compradorId;
+    const toUserName = isComprador ? interest.produtorNome : interest.compradorNome;
+
+    try {
+      this.evaluationService.createEvaluation(
+        interest.id,
+        this.user.id,
+        this.user.nome,
+        toUserId,
+        toUserName,
+        this.evalRating,
+        this.evalComment
+      );
+
+      this.interestService.markAsRated(interest.id, this.user.id);
+
+      this.snack.open(`Avaliação submetida com sucesso para ${toUserName}!`, 'Sucesso', {
+        duration: 3000,
+        panelClass: ['snackbar-success']
+      });
+
+      this.showEvaluationModal = false;
+      this.selectedInterestForEvaluation = null;
+      this.loadInterests();
+      this.loadOffers();
+      this.loadAdminData();
+    } catch (e: any) {
+      this.snack.open(e.message || 'Erro ao guardar avaliação.', 'Erro', { duration: 3000 });
+    }
+  }
+
+  // RF-44: Administrador - carregar dados de moderação
+  loadAdminData(): void {
+    if (this.user?.isAdmin) {
+      this.reportedEvaluations = this.evaluationService.getReportedEvaluations();
+      this.allEvaluations = this.evaluationService.getAllEvaluations();
+    }
+  }
+
+  // RF-44: Denunciar avaliação como ofensiva ou fraudulenta
+  abrirModalReportar(evaluationId: number): void {
+    this.evaluationToReportId = evaluationId;
+    this.reportReason = '';
+    this.showReportModal = true;
+  }
+
+  submeterDenuncia(): void {
+    if (this.evaluationToReportId === null || !this.reportReason) return;
+
+    this.evaluationService.reportEvaluation(this.evaluationToReportId, this.reportReason);
+    this.snack.open('A sua denúncia foi enviada para análise da administração.', 'Obrigado', { duration: 3500 });
+    this.showReportModal = false;
+    this.evaluationToReportId = null;
+    this.loadAdminData();
+  }
+
+  // RF-44: Administrador - remover avaliação
+  removerAvaliacao(evaluationId: number): void {
+    if (!this.user?.isAdmin) return;
+    this.evaluationService.removeEvaluation(evaluationId);
+    this.snack.open('Avaliação removida permanentemente do sistema.', 'Painel Admin', {
+      duration: 3000,
+      panelClass: ['snackbar-success']
+    });
+    this.loadAdminData();
+    this.loadOffers();
   }
 }
 

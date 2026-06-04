@@ -18,6 +18,16 @@
             <mat-icon>place</mat-icon>
             {{ user?.provincia }}, {{ user?.distrito }}
           </span>
+          <span class="reputation-badge" style="display: inline-flex; align-items: center; background: rgba(255,193,7,0.15); color: #b58200; padding: 4px 10px; border-radius: 20px; font-weight: bold; font-size: 0.85rem; gap: 4px; margin-left: 8px; vertical-align: middle; border: 1px solid rgba(255,193,7,0.3);">
+            <mat-icon style="font-size: 16px; width: 16px; height: 16px; color: #ffb300; display: inline-flex; align-items: center;">star</mat-icon>
+            {{ evaluationService.getUserReputation(user?.id || 0).average }} 
+            <span style="font-weight: normal; color: #64748b; font-size: 0.75rem;">
+              ({{ evaluationService.getUserReputation(user?.id || 0).total }} avaliações)
+            </span>
+            <span style="margin-left: 6px; padding-left: 6px; border-left: 1px solid rgba(0,0,0,0.1); color: #0288d1; font-weight: bold;">
+              💼 {{ evaluationService.getCompletedTransactionsCount(user?.id || 0) }} concluídas
+            </span>
+          </span>
         </div>
       </div>
       
@@ -127,6 +137,63 @@
       </div>
     }
   </div>
+
+  <!-- ========================================== -->
+  <!-- AVALIAÇÕES E CONFIRMAÇÕES PENDENTES (RF-39, RF-40) -->
+  <!-- ========================================== -->
+  @if (pendingConfirmations.length > 0 || pendingEvaluationsList.length > 0) {
+    <div class="pending-evaluations-card animate-fade-in" style="background: linear-gradient(135deg, #fffbeb 0%, #fff7ed 100%); border: 1px solid #fef3c7; border-radius: 16px; padding: 20px; margin-bottom: 24px; box-shadow: 0 4px 12px rgba(251,191,36,0.1);">
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
+        <mat-icon style="color: #d97706; font-size: 28px; width: 28px; height: 28px;">rate_review</mat-icon>
+        <h2 style="margin: 0; font-size: 1.25rem; font-weight: 800; color: #92400e;">Avaliações e Confirmações Pendentes</h2>
+      </div>
+
+      <!-- 1. Confirmar se Concluída (RF-39, RF-40) -->
+      @if (pendingConfirmations.length > 0) {
+        <div style="margin-bottom: 16px;">
+          <h3 style="font-size: 0.95rem; font-weight: 700; color: #b45309; margin-bottom: 8px;">Confirmar Conclusão da Transação:</h3>
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            @for (interest of pendingConfirmations; track interest.id) {
+              <div style="background: #fff; border: 1px solid #fde68a; padding: 16px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                <div>
+                  <strong style="color: #1e293b; font-size: 0.95rem;">Oferta de colheita: {{ interest.produto }}</strong>
+                  <span style="color: #64748b; font-size: 0.85rem; display: block; margin-top: 2px;">
+                    Parceiro comercial: <strong>{{ user?.id === interest.compradorId ? interest.produtorNome : interest.compradorNome }}</strong>
+                  </span>
+                </div>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                  <button mat-stroked-button color="warn" style="font-weight: bold; border-radius: 8px;" (click)="confirmCompletion(interest, false)">Não concluída</button>
+                  <button mat-flat-button style="background-color: #d97706; color: white; font-weight: bold; border-radius: 8px;" (click)="confirmCompletion(interest, true)">Sim, Concluída</button>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- 2. Avaliações Pendentes (RF-40) -->
+      @if (pendingEvaluationsList.length > 0) {
+        <div>
+          <h3 style="font-size: 0.95rem; font-weight: 700; color: #b45309; margin-bottom: 8px;">Classificar o Parceiro Comercial:</h3>
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            @for (interest of pendingEvaluationsList; track interest.id) {
+              <div style="background: #fff; border: 1px solid #fde68a; padding: 16px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                <div>
+                  <span style="color: #64748b; font-size: 0.85rem;">Concluiu a transação de <strong>{{ interest.produto }}</strong></span>
+                  <strong style="color: #1e293b; display: block; font-size: 1.05rem; margin-top: 2px;">
+                    Classificar: {{ user?.id === interest.compradorId ? interest.produtorNome : interest.compradorNome }}
+                  </strong>
+                </div>
+                <button mat-flat-button color="primary" style="font-weight: bold; border-radius: 8px;" (click)="abrirModalAvaliacao(interest)">
+                  <mat-icon>star</mat-icon> Avaliar Agora
+                </button>
+              </div>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  }
 
   <!-- Duas Colunas de Conteúdo -->
   <div class="dashboard-content-layout">
@@ -351,9 +418,16 @@
                         <button mat-flat-button color="primary" (click)="acceptInterest(interest)">Aceitar contacto</button>
                       </div>
                     } @else if (interest.status === 'Aceite') {
-                      <div class="prop-status-message" style="color: #2e7d32; font-size: 0.85rem; display: flex; align-items: center; gap: 4px; font-weight: 500;">
-                        <mat-icon style="font-size: 16px; width: 16px; height: 16px;">check_circle</mat-icon>
-                        Contacto aceite. O comprador recebeu o seu número. Negocie via WhatsApp/Chamada!
+                      <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; border-top: 1px solid rgba(0,0,0,0.05); padding-top: 12px; margin-top: 8px;">
+                        <div class="prop-status-message" style="color: #2e7d32; font-size: 0.85rem; display: flex; align-items: center; gap: 4px; font-weight: 500;">
+                          <mat-icon style="font-size: 16px; width: 16px; height: 16px;">check_circle</mat-icon>
+                          Contacto aceite. Negocie via WhatsApp/Chamada!
+                        </div>
+                        @if (interest.produtorConfirmou === null || interest.produtorConfirmou === undefined) {
+                          <button mat-stroked-button color="accent" style="font-size: 0.75rem; height: 32px; border-radius: 6px; padding: 0 10px;" (click)="simulateTimePassed(interest)">
+                            <mat-icon style="font-size: 14px; width: 14px; height: 14px;">schedule</mat-icon> Simular +7 dias
+                          </button>
+                        }
                       </div>
                     } @else if (interest.status === 'Recusado') {
                       <div class="prop-status-message" style="color: #c62828; font-size: 0.85rem; display: flex; align-items: center; gap: 4px; font-weight: 500;">
@@ -401,7 +475,12 @@
                 <div class="market-offer-card">
                   <div class="offer-header">
                     <div>
-                      <span class="offer-produtor">{{ offer.produtorNome }}</span>
+                      <span class="offer-produtor" style="display: flex; align-items: center; gap: 6px;">
+                        {{ offer.produtorNome }}
+                        <span style="color: #b58200; font-size: 0.8rem; font-weight: bold; display: inline-flex; align-items: center; gap: 2px; background: rgba(255,193,7,0.15); padding: 2px 6px; border-radius: 10px;">
+                          ⭐ {{ offer.produtorReputacao }}
+                        </span>
+                      </span>
                       <span class="offer-location"><mat-icon>place</mat-icon> {{ offer.distrito }}, {{ offer.provincia }}</span>
                     </div>
                     <span class="offer-tag activa">{{ offer.estado }}</span>
@@ -516,8 +595,13 @@
                           <mat-icon style="font-size: 18px; width: 18px; height: 18px;">phone</mat-icon>
                           <strong>Contacto do Produtor Revelado!</strong>
                         </div>
-                        <div style="font-size: 1.1rem; font-weight: bold; color: #1b5e20; margin-left: 22px;">
-                          Telefone: {{ interest.produtorTelefone }}
+                        <div style="font-size: 1.1rem; font-weight: bold; color: #1b5e20; margin-left: 22px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                          <span>Telefone: {{ interest.produtorTelefone }}</span>
+                          @if (interest.compradorConfirmou === null || interest.compradorConfirmou === undefined) {
+                            <button mat-stroked-button color="accent" style="font-size: 0.75rem; height: 32px; border-radius: 6px; padding: 0 10px;" (click)="simulateTimePassed(interest)">
+                              <mat-icon style="font-size: 14px; width: 14px; height: 14px;">schedule</mat-icon> Simular +7 dias
+                            </button>
+                          }
                         </div>
                         <div style="font-size: 0.8rem; font-weight: normal; color: #555; margin-left: 22px;">
                           Pode contactar este produtor diretamente via chamada ou WhatsApp (RF-38). O sistema não possui chat interno.
@@ -994,4 +1078,179 @@
     </div>
   </div>
 
+  <!-- ========================================================== -->
+  <!-- MODAL: SUBMETER AVALIAÇÃO DE TRASAÇÃO (RF-40) -->
+  <!-- ========================================================== -->
+  <div class="modal-overlay" *ngIf="showEvaluationModal">
+    <div class="modal-card" style="max-width: 480px; width: 90%; border-radius: 16px; padding: 24px; background: #fff; box-shadow: 0 10px 25px rgba(0,0,0,0.15);">
+      <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #f1f5f9; padding-bottom: 12px;">
+        <h3 style="font-size: 1.25rem; font-weight: 800; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 6px;">
+          <mat-icon style="color: #ffb300;">star</mat-icon> Classificar Parceiro Comercial
+        </h3>
+        <button class="close-btn" (click)="showEvaluationModal = false" style="background: none; border: none; cursor: pointer; color: #64748b; display: flex; align-items: center;"><mat-icon>close</mat-icon></button>
+      </div>
+
+      <div class="modal-body" *ngIf="selectedInterestForEvaluation">
+        <p style="font-size: 0.9rem; color: #64748b; margin-bottom: 20px; line-height: 1.5;">
+          Por favor, avalie a sua experiência comercial com 
+          <strong>{{ user?.id === selectedInterestForEvaluation.compradorId ? selectedInterestForEvaluation.produtorNome : selectedInterestForEvaluation.compradorNome }}</strong> 
+          relativamente à transação da oferta de <strong>{{ selectedInterestForEvaluation.produto }}</strong>.
+        </p>
+
+        <!-- Widget de Estrelas Interativo -->
+        <div class="rating-stars-selection" style="display: flex; justify-content: center; gap: 12px; margin-bottom: 24px;">
+          @for (star of [1, 2, 3, 4, 5]; track star) {
+            <button type="button" (click)="evalRating = star" style="background: none; border: none; cursor: pointer; padding: 0; outline: none; transition: transform 0.15s ease;">
+              <mat-icon style="font-size: 40px; width: 40px; height: 40px; color: #ffb300;" 
+                        [style.color]="star <= evalRating ? '#ffb300' : '#cbd5e1'">
+                {{ star <= evalRating ? 'star' : 'star_border' }}
+              </mat-icon>
+            </button>
+          }
+        </div>
+
+        <!-- Comentário Opcional -->
+        <div class="form-group" style="margin-bottom: 16px; display: flex; flex-direction: column; gap: 6px;">
+          <label style="font-weight: 600; display: block; font-size: 0.85rem; color: #334155;">
+            Comentário Adicional (Opcional)
+          </label>
+          <textarea [(ngModel)]="evalComment" placeholder="Escreva sobre a pontualidade, qualidade do produto, facilidade de negociação..." 
+                    style="width: 100%; min-height: 100px; padding: 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-family: inherit; font-size: 0.9rem; box-sizing: border-box; resize: vertical; outline: none; transition: border-color 0.2s;"
+                    onfocus="this.style.borderColor='#00695c'"></textarea>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 12px; border-top: 1px solid #f1f5f9; padding-top: 16px; margin-top: 12px;">
+        <button mat-button class="btn-cancel" (click)="showEvaluationModal = false" style="font-weight: bold; border-radius: 8px;">Cancelar</button>
+        <button mat-flat-button color="primary" class="btn-submit" (click)="submeterAvaliacao()" style="font-weight: bold; border-radius: 8px; padding: 0 20px;">Submeter Classificação</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================== -->
+  <!-- MODAL: REPORTAR AVALIAÇÃO OFENSIVA OU FRAUDULENTA (RF-44) -->
+  <!-- ========================================================== -->
+  <div class="modal-overlay" *ngIf="showReportModal">
+    <div class="modal-card" style="max-width: 450px; width: 90%; border-radius: 16px; padding: 24px; background: #fff; box-shadow: 0 10px 25px rgba(0,0,0,0.15);">
+      <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #f1f5f9; padding-bottom: 12px;">
+        <h3 style="font-size: 1.2rem; font-weight: 800; color: #991b1b; margin: 0; display: flex; align-items: center; gap: 6px;">
+          <mat-icon style="color: #ef4444;">report</mat-icon> Denunciar Avaliação
+        </h3>
+        <button class="close-btn" (click)="showReportModal = false" style="background: none; border: none; cursor: pointer; color: #64748b; display: flex; align-items: center;"><mat-icon>close</mat-icon></button>
+      </div>
+
+      <div class="modal-body">
+        <p style="font-size: 0.9rem; color: #64748b; margin-bottom: 16px; line-height: 1.5;">
+          Por favor, indique a razão pela qual considera esta avaliação inadequada, ofensiva ou fraudulenta.
+        </p>
+
+        <div class="form-group" style="margin-bottom: 16px; display: flex; flex-direction: column; gap: 6px;">
+          <label style="font-weight: 600; display: block; font-size: 0.85rem; color: #334155;">
+            Motivo da Denúncia *
+          </label>
+          <textarea [(ngModel)]="reportReason" placeholder="Indique o motivo detalhado (ex: linguagem ofensiva, informação falsa, difamação...)" 
+                    style="width: 100%; min-height: 90px; padding: 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-family: inherit; font-size: 0.9rem; box-sizing: border-box; resize: vertical; outline: none; transition: border-color 0.2s;"
+                    onfocus="this.style.borderColor='#ef4444'"></textarea>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 12px; border-top: 1px solid #f1f5f9; padding-top: 16px; margin-top: 12px;">
+        <button mat-button class="btn-cancel" (click)="showReportModal = false" style="font-weight: bold; border-radius: 8px;">Cancelar</button>
+        <button mat-flat-button color="warn" style="font-weight: bold; border-radius: 8px;" [disabled]="!reportReason" (click)="submeterDenuncia()">Submeter Denúncia</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================== -->
+  <!-- PAINEL DE ADMINISTRAÇÃO - MODERAÇÃO DE AVALIAÇÕES (RF-44) -->
+  <!-- ========================================================== -->
+  @if (user?.isAdmin) {
+    <div class="section-container admin-panel" style="margin-top: 40px; border: 2px solid #ef4444; padding: 24px; border-radius: 16px; background: #fef2f2;">
+      <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #fee2e2; padding-bottom: 16px; margin-bottom: 20px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <mat-icon style="color: #ef4444; font-size: 32px; width: 32px; height: 32px;">admin_panel_settings</mat-icon>
+          <h2 style="margin: 0; font-size: 1.5rem; font-weight: 900; color: #991b1b;">Painel de Administração - Moderação</h2>
+        </div>
+        <span style="background: #ef4444; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; text-transform: uppercase;">ADMIN PRO</span>
+      </div>
+
+      <mat-tab-group>
+        <mat-tab>
+          <ng-template mat-tab-label>
+            <mat-icon style="margin-right: 6px; color: #ef4444;">report</mat-icon>
+            Denunciadas ({{ reportedEvaluations.length }})
+          </ng-template>
+          
+          <div style="padding-top: 20px;">
+            @if (reportedEvaluations.length === 0) {
+              <div style="text-align: center; padding: 30px; color: #991b1b;">
+                <mat-icon style="font-size: 48px; width: 48px; height: 48px;">check_circle_outline</mat-icon>
+                <p style="font-weight: 500; margin-top: 10px;">Excelente! Nenhuma avaliação denunciada pendente de moderação.</p>
+              </div>
+            } @else {
+              <div style="display: flex; flex-direction: column; gap: 16px;">
+                @for (ev of reportedEvaluations; track ev.id) {
+                  <div style="background: #fff; border: 1px solid #fee2e2; border-left: 6px solid #ef4444; border-radius: 12px; padding: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; flex-wrap: wrap; gap: 10px;">
+                      <div>
+                        <strong style="color: #1e293b;">De: {{ ev.fromUserName }} → Para: {{ ev.toUserName }}</strong>
+                        <div style="display: flex; align-items: center; gap: 4px; margin-top: 2px;">
+                          @for (star of [1, 2, 3, 4, 5]; track star) {
+                            <mat-icon style="font-size: 16px; width: 16px; height: 16px;" [style.color]="star <= ev.rating ? '#ffb300' : '#cbd5e1'">star</mat-icon>
+                          }
+                        </div>
+                      </div>
+                      <button mat-flat-button color="warn" style="font-weight: bold; border-radius: 8px;" (click)="removerAvaliacao(ev.id)">
+                        <mat-icon>delete</mat-icon> Remover Avaliação
+                      </button>
+                    </div>
+                    
+                    <p style="background: #f8fafc; padding: 10px; border-radius: 6px; font-size: 0.9rem; font-style: italic; color: #475569; margin: 8px 0; border: 1px solid #e2e8f0;">
+                      "{{ ev.comentario || 'Sem comentário.' }}"
+                    </p>
+
+                    <div style="background: #fee2e2; border-radius: 8px; padding: 10px; font-size: 0.85rem; color: #991b1b; display: flex; align-items: center; gap: 6px;">
+                      <mat-icon style="font-size: 16px; width: 16px; height: 16px;">warning</mat-icon>
+                      <strong>Motivo da Denúncia:</strong> "{{ ev.motivoDenuncia }}"
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        </mat-tab>
+
+        <mat-tab>
+          <ng-template mat-tab-label>
+            <mat-icon style="margin-right: 6px; color: #475569;">list</mat-icon>
+            Todas as Avaliações ({{ allEvaluations.length }})
+          </ng-template>
+          
+          <div style="padding-top: 20px; display: flex; flex-direction: column; gap: 12px;">
+            @for (ev of allEvaluations; track ev.id) {
+              <div style="background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; display: flex; justify-content: space-between; align-items: center; gap: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                <div style="flex: 1;">
+                  <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
+                    <strong style="color: #1e293b;">{{ ev.fromUserName }} avaliou {{ ev.toUserName }}</strong>
+                    <span style="font-size: 0.8rem; color: #94a3b8;">{{ ev.dataCriacao | date:'dd/MM/yyyy HH:mm' }}</span>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 4px; margin-top: 2px;">
+                    @for (star of [1, 2, 3, 4, 5]; track star) {
+                      <mat-icon style="font-size: 14px; width: 14px; height: 14px;" [style.color]="star <= ev.rating ? '#ffb300' : '#cbd5e1'">star</mat-icon>
+                    }
+                  </div>
+                  <p style="margin: 6px 0 0; font-size: 0.85rem; color: #475569; font-style: italic;">
+                    "{{ ev.comentario || 'Sem comentário.' }}"
+                  </p>
+                </div>
+                <button mat-stroked-button color="warn" style="font-weight: bold; font-size: 0.8rem; border-radius: 6px;" (click)="removerAvaliacao(ev.id)">
+                  Remover
+                </button>
+              </div>
+            }
+          </div>
+        </mat-tab>
+      </mat-tab-group>
+    </div>
+  }
 </div>

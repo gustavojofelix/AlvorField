@@ -2,8 +2,10 @@ import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthService, User, UserType } from '../../services/auth.service';
 import { LocationService, Province } from '../../services/location.service';
-import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
+import { EvaluationService, Evaluation } from '../../services/evaluation.service';
+
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -25,6 +27,7 @@ import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
     MatButtonModule,
     MatIconModule,
     MatSnackBarModule,
+    FormsModule
   ],
   templateUrl: './profile.component.html',
   styleUrl: './profile.component.scss',
@@ -36,6 +39,12 @@ export class ProfileComponent implements OnInit {
 
   provinces: Province[] = [];
   districts: string[] = [];
+
+  // Denúncia de avaliações no perfil
+  showReportModal = false;
+  evaluationToReportId: number | null = null;
+  reportReason = '';
+
 
   buyerTypes = ['Processador', 'Grossista', 'Exportador', 'Retalhista', 'Outro'];
   availableProducts = [
@@ -58,7 +67,8 @@ export class ProfileComponent implements OnInit {
     private auth: AuthService,
     private locationService: LocationService,
     private snack: MatSnackBar,
-    private router: Router
+    private router: Router,
+    public evaluationService: EvaluationService
   ) {
     this.profileForm = this.fb.group({
       nome: ['', [Validators.required, Validators.minLength(3)]],
@@ -192,5 +202,25 @@ export class ProfileComponent implements OnInit {
 
   voltar(): void {
     this.router.navigate(['/dashboard']);
+  }
+
+  // Obter avaliações recebidas
+  get reviews(): Evaluation[] {
+    if (!this.currentUser) return [];
+    return this.evaluationService.getEvaluationsForUser(this.currentUser.id);
+  }
+
+  abrirModalReportar(evaluationId: number): void {
+    this.evaluationToReportId = evaluationId;
+    this.reportReason = '';
+    this.showReportModal = true;
+  }
+
+  submeterDenuncia(): void {
+    if (this.evaluationToReportId === null || !this.reportReason) return;
+    this.evaluationService.reportEvaluation(this.evaluationToReportId, this.reportReason);
+    this.snack.open('Avaliação denunciada aos administradores.', 'OK', { duration: 3000 });
+    this.showReportModal = false;
+    this.evaluationToReportId = null;
   }
 }

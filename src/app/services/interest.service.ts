@@ -17,7 +17,13 @@ export interface Interest {
   unidade: 'kg' | 'ton';
   dataInteresse: number;
   status: 'Pendente' | 'Aceite' | 'Recusado';
+  dataAceite?: number; // Data em que o contacto foi aceite
+  compradorConfirmou?: boolean | null; // Sim (true), Não (false), Aguardando (null)
+  produtorConfirmou?: boolean | null; // Sim (true), Não (false), Aguardando (null)
+  compradorAvaliou?: boolean; // Se o comprador já avaliou o produtor
+  produtorAvaliou?: boolean; // Se o produtor já avaliou o comprador
 }
+
 
 @Injectable({
   providedIn: 'root'
@@ -140,6 +146,11 @@ export class InterestService {
     if (!producer) throw new Error('Produtor não encontrado.');
 
     interest.status = 'Aceite';
+    interest.dataAceite = Date.now();
+    interest.compradorConfirmou = null;
+    interest.produtorConfirmou = null;
+    interest.compradorAvaliou = false;
+    interest.produtorAvaliou = false;
     interest.produtorTelefone = producer.telefone; // Revela o contacto do produtor
     this.saveInterests(interests);
 
@@ -162,5 +173,55 @@ export class InterestService {
     // Notificar comprador sobre a recusa (consola/simulado)
     const notificationMsg = `Lamentamos, mas o produtor ${interest.produtorNome} recusou o interesse na oferta de ${interest.produto}.`;
     console.info(`[SMS/APP NOTIFICATION ENVIADA AO COMPRADOR ${interest.compradorNome}]: ${notificationMsg}`);
+  }
+
+  // RF-39, RF-40, RF-41
+  confirmTransaction(interestId: number, userId: number, confirmed: boolean): void {
+    const interests = this.getInterests();
+    const index = interests.findIndex(i => i.id === interestId);
+    if (index === -1) throw new Error('Transação não encontrada.');
+
+    const interest = interests[index];
+    if (userId === interest.compradorId) {
+      interest.compradorConfirmou = confirmed;
+    } else if (userId === interest.produtorId) {
+      interest.produtorConfirmou = confirmed;
+    } else {
+      throw new Error('Utilizador sem autorização para confirmar esta transação.');
+    }
+
+    this.saveInterests(interests);
+
+    // RF-41: Se ambas as partes confirmarem a conclusão, a oferta é marcada como Concluída
+    if (interest.compradorConfirmou === true && interest.produtorConfirmou === true) {
+      this.offerService.markAsCompleted(interest.offerId);
+      console.info(`[SISTEMA]: Ambas as partes confirmaram a conclusão. Oferta ${interest.offerId} marcada como CONCLUÍDA.`);
+    }
+  }
+
+  markAsRated(interestId: number, userId: number): void {
+    const interests = this.getInterests();
+    const index = interests.findIndex(i => i.id === interestId);
+    if (index === -1) return;
+
+    const interest = interests[index];
+    if (userId === interest.compradorId) {
+      interest.compradorAvaliou = true;
+    } else if (userId === interest.produtorId) {
+      interest.produtorAvaliou = true;
+    }
+    this.saveInterests(interests);
+  }
+
+  // Simulação de tempo para fins de teste
+  simulateSevenDaysPassed(interestId: number): void {
+    const interests = this.getInterests();
+    const index = interests.findIndex(i => i.id === interestId);
+    if (index === -1) return;
+
+    const interest = interests[index];
+    // Altera a data de aceitação para 8 dias atrás para passar os 7 dias
+    interest.dataAceite = Date.now() - (8 * 24 * 60 * 60 * 1000);
+    this.saveInterests(interests);
   }
 }

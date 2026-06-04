@@ -11,6 +11,7 @@ export interface User {
   tipo: UserType;
   provincia: string;
   distrito: string;
+  isAdmin?: boolean; // Se o utilizador é um administrador do sistema
   
   // Campos extra
   areaCultivo?: number; // Produtor Individual e Cooperativa
@@ -19,12 +20,13 @@ export interface User {
   tipoComprador?: 'Processador' | 'Grossista' | 'Exportador' | 'Retalhista' | 'Outro'; // Comprador
   produtosInteresse?: string[]; // Comprador
   tipoInstituicao?: 'Banco' | 'Fundo de Impacto' | 'ONG' | 'Governo' | 'Outro'; // Investidor
-
+  
   ultimoLogin?: number;
   ultimoAcesso?: number;
   avatar?: string;
   descricao?: string;
 }
+
 
 export interface AuthResult {
   success: boolean;
@@ -89,6 +91,20 @@ export class AuthService {
       avatar: 'trending_up',
       ultimoLogin: Date.now(),
       ultimoAcesso: Date.now()
+    },
+    {
+      id: 4,
+      nome: 'Administrador Alvor',
+      telefone: '840000000',
+      password: 'admin',
+      tipo: 'Comprador',
+      provincia: 'Maputo Cidade',
+      distrito: 'KaMpfumo',
+      descricao: 'Administrador global do sistema AlvorField.',
+      avatar: 'admin_panel_settings',
+      ultimoLogin: Date.now(),
+      ultimoAcesso: Date.now(),
+      isAdmin: true
     }
   ];
 
