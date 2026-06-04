@@ -295,6 +295,78 @@
             }
           </div>
         </div>
+
+        <!-- Meus Interesses (RF-34) -->
+        <div class="section-container" id="interesses-seccao" style="margin-top: 24px;">
+          <div class="section-header">
+            <h3><mat-icon>notifications_active</mat-icon> Meus Interesses (Manifestações Recebidas)</h3>
+          </div>
+
+          <div class="offers-table-card">
+            @if (receivedInterests.length === 0) {
+              <div class="empty-state">
+                <mat-icon>notifications_none</mat-icon>
+                <p>Nenhuma manifestação de interesse recebida até ao momento.</p>
+              </div>
+            } @else {
+              <div class="proposals-list">
+                @for (interest of receivedInterests; track interest.id) {
+                  <div class="proposal-card-item" [ngClass]="interest.status.toLowerCase()" style="margin-bottom: 16px; border: 1px solid #e0e0e0; border-radius: 12px; padding: 16px; background: #fff; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
+                    <div class="prop-top" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                      <div>
+                        <h4 style="margin: 0; font-size: 1.1rem; font-weight: 600;">{{ interest.compradorNome }}</h4>
+                        <p class="prop-sub" style="margin: 4px 0 0; font-size: 0.85rem; color: #666;">
+                          Interessado na oferta de: <strong>{{ interest.produto }}</strong>
+                        </p>
+                      </div>
+                      <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+                        <span class="prop-status" [ngClass]="interest.status.toLowerCase()" 
+                              style="padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; text-transform: uppercase;">
+                          {{ interest.status }}
+                        </span>
+                        <span class="time-lbl" style="font-size: 0.75rem; color: #999;">
+                          {{ interest.dataInteresse | date:'dd/MM/yyyy HH:mm' }}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div class="interest-message" style="background: rgba(0,0,0,0.02); padding: 10px; border-radius: 6px; margin-bottom: 12px; font-size: 0.9rem; border-left: 3px solid #2b78e4; font-style: italic;">
+                      <strong>Mensagem:</strong> "{{ interest.mensagem }}"
+                    </div>
+
+                    <div class="prop-details" style="display: flex; gap: 16px; margin-bottom: 12px; font-size: 0.85rem;">
+                      <div class="detail-item" *ngIf="interest.quantidadePretendida">
+                        <span style="color: #666; display: block;">Quantidade Pretendida:</span>
+                        <strong>{{ interest.quantidadePretendida }} {{ interest.unidade }}</strong>
+                      </div>
+                      <div class="detail-item">
+                        <span style="color: #666; display: block;">Contacto Comprador:</span>
+                        <strong>{{ interest.compradorTelefone }}</strong>
+                      </div>
+                    </div>
+
+                    @if (interest.status === 'Pendente') {
+                      <div class="prop-actions" style="display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid rgba(0,0,0,0.05); padding-top: 10px;">
+                        <button mat-stroked-button color="warn" (click)="refuseInterest(interest)">Recusar</button>
+                        <button mat-flat-button color="primary" (click)="acceptInterest(interest)">Aceitar contacto</button>
+                      </div>
+                    } @else if (interest.status === 'Aceite') {
+                      <div class="prop-status-message" style="color: #2e7d32; font-size: 0.85rem; display: flex; align-items: center; gap: 4px; font-weight: 500;">
+                        <mat-icon style="font-size: 16px; width: 16px; height: 16px;">check_circle</mat-icon>
+                        Contacto aceite. O comprador recebeu o seu número. Negocie via WhatsApp/Chamada!
+                      </div>
+                    } @else if (interest.status === 'Recusado') {
+                      <div class="prop-status-message" style="color: #c62828; font-size: 0.85rem; display: flex; align-items: center; gap: 4px; font-weight: 500;">
+                        <mat-icon style="font-size: 16px; width: 16px; height: 16px;">cancel</mat-icon>
+                        Contacto recusado. O comprador foi notificado.
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        </div>
       }
 
       <!-- SEÇÃO EXCLUSIVA: COMPRADOR (Mercado Aberto e Pedidos de Cotação) -->
@@ -389,6 +461,82 @@
                   </div>
                 </div>
               }
+            }
+          </div>
+        </div>
+
+        <!-- Minhas Manifestações de Interesse (Histórico) (RF-37) -->
+        <div class="section-container" style="margin-top: 24px;">
+          <div class="section-header">
+            <h3><mat-icon>history</mat-icon> Histórico de Manifestações de Interesse (Contacto e Negociação)</h3>
+          </div>
+
+          <div class="offers-table-card">
+            @if (sentInterests.length === 0) {
+              <div class="empty-state">
+                <mat-icon>mail_outline</mat-icon>
+                <p>Ainda não manifestou interesse em nenhuma oferta agrícola. Explore o mercado!</p>
+              </div>
+            } @else {
+              <div class="proposals-list">
+                @for (interest of sentInterests; track interest.id) {
+                  <div class="proposal-card-item" [ngClass]="interest.status.toLowerCase()" style="margin-bottom: 16px; border: 1px solid #e0e0e0; border-radius: 12px; padding: 16px; background: #fff; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
+                    <div class="prop-top" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                      <div>
+                        <h4 style="margin: 0; font-size: 1.1rem; font-weight: 600;">Produtor: {{ interest.produtorNome }}</h4>
+                        <p class="prop-sub" style="margin: 4px 0 0; font-size: 0.85rem; color: #666;">
+                          Cultura / Produto: <strong>{{ interest.produto }}</strong>
+                        </p>
+                      </div>
+                      <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+                        <span class="prop-status" [ngClass]="interest.status.toLowerCase()" 
+                              style="padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; text-transform: uppercase;">
+                          {{ interest.status }}
+                        </span>
+                        <span class="time-lbl" style="font-size: 0.75rem; color: #999;">
+                          {{ interest.dataInteresse | date:'dd/MM/yyyy HH:mm' }}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div class="interest-message" style="background: rgba(0,0,0,0.02); padding: 10px; border-radius: 6px; margin-bottom: 12px; font-size: 0.9rem; border-left: 3px solid #1e88e5; font-style: italic;">
+                      <strong>Sua Mensagem:</strong> "{{ interest.mensagem }}"
+                    </div>
+
+                    <div class="prop-details" style="display: flex; gap: 16px; margin-bottom: 12px; font-size: 0.85rem;">
+                      <div class="detail-item" *ngIf="interest.quantidadePretendida">
+                        <span style="color: #666; display: block;">Sua Quantidade Pretendida:</span>
+                        <strong>{{ interest.quantidadePretendida }} {{ interest.unidade }}</strong>
+                      </div>
+                    </div>
+
+                    @if (interest.status === 'Aceite') {
+                      <div class="prop-status-message" style="color: #2e7d32; font-size: 0.9rem; display: flex; flex-direction: column; gap: 6px; font-weight: 500; background: rgba(46, 125, 50, 0.05); padding: 12px; border-radius: 8px;">
+                        <div style="display: flex; align-items: center; gap: 4px;">
+                          <mat-icon style="font-size: 18px; width: 18px; height: 18px;">phone</mat-icon>
+                          <strong>Contacto do Produtor Revelado!</strong>
+                        </div>
+                        <div style="font-size: 1.1rem; font-weight: bold; color: #1b5e20; margin-left: 22px;">
+                          Telefone: {{ interest.produtorTelefone }}
+                        </div>
+                        <div style="font-size: 0.8rem; font-weight: normal; color: #555; margin-left: 22px;">
+                          Pode contactar este produtor diretamente via chamada ou WhatsApp (RF-38). O sistema não possui chat interno.
+                        </div>
+                      </div>
+                    } @else if (interest.status === 'Recusado') {
+                      <div class="prop-status-message" style="color: #c62828; font-size: 0.85rem; display: flex; align-items: center; gap: 4px; font-weight: 500; background: rgba(198, 40, 40, 0.05); padding: 10px; border-radius: 6px;">
+                        <mat-icon style="font-size: 16px; width: 16px; height: 16px;">cancel</mat-icon>
+                        O produtor recusou o contacto para esta oferta.
+                      </div>
+                    } @else {
+                      <div class="prop-status-message" style="color: #ef6c00; font-size: 0.85rem; display: flex; align-items: center; gap: 4px; font-weight: 500;">
+                        <mat-icon style="font-size: 16px; width: 16px; height: 16px;">hourglass_empty</mat-icon>
+                        Aguardando que o produtor aceite o contacto para revelar o número de telefone.
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
             }
           </div>
         </div>

@@ -484,6 +484,9 @@
         </mat-icon>
         {{ isFavorite(selectedOffer.id) ? 'Favoritada' : 'Guardar nos Favoritos' }}
       </button>
+      <button mat-flat-button color="accent" (click)="openInterest(selectedOffer)" class="interest-action-btn">
+        <mat-icon>check_circle</mat-icon> Tenho Interesse
+      </button>
       <button mat-flat-button color="primary" (click)="openBid(selectedOffer)" class="proposal-action-btn">
         Fazer Proposta Directa
       </button>
@@ -629,6 +632,65 @@
     <div class="modal-footer-actions">
       <button mat-button class="cancel-btn" (click)="showBidModal = false">Cancelar</button>
       <button mat-flat-button color="primary" (click)="submitBid()">Enviar Proposta</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========================================================== -->
+<!-- MODAL D: MANIFESTAR INTERESSE (RF-32) -->
+<!-- ========================================================== -->
+<div class="market-modal-overlay" *ngIf="showInterestModal">
+  <div class="market-modal-card dialog-size animate-scale-in">
+    <div class="modal-header-banner alert-blue" style="background: linear-gradient(135deg, #1e88e5, #1565c0);">
+      <div class="banner-title-box">
+        <mat-icon class="banner-icon">handshake</mat-icon>
+        <div>
+          <h2>Manifestar Interesse na Oferta</h2>
+          <span>Inicie um contacto com o produtor para negociação</span>
+        </div>
+      </div>
+      <button class="modal-close-btn" (click)="showInterestModal = false"><mat-icon>close</mat-icon></button>
+    </div>
+
+    <div class="modal-body-scrollable pad-20" *ngIf="selectedOffer">
+      <div class="negotiation-summary-box" style="background: rgba(0,0,0,0.03); padding: 12px; border-radius: 8px; margin-bottom: 16px;">
+        <div class="summary-line" style="display:flex; justify-content:space-between; margin-bottom: 4px;"><span>Cultura:</span> <strong>{{ selectedOffer.produto }}</strong></div>
+        <div class="summary-line" style="display:flex; justify-content:space-between; margin-bottom: 4px;"><span>Produtor:</span> <strong>{{ selectedOffer.produtorNome }}</strong></div>
+        <div class="summary-line" style="display:flex; justify-content:space-between; margin-bottom: 4px;"><span>Volume total:</span> <strong>{{ selectedOffer.quantidade }} {{ selectedOffer.unidade }}</strong></div>
+        <div class="summary-line" style="display:flex; justify-content:space-between; margin-bottom: 4px;"><span>Preço:</span> <strong>{{ selectedOffer.precoUnitario }} MZN/{{ selectedOffer.unidade }}</strong></div>
+      </div>
+
+      <div class="dialog-form">
+        <!-- Mensagem Obrigatória (mínimo 10 caracteres) -->
+        <div class="dialog-field" style="margin-bottom: 16px; display: flex; flex-direction: column;">
+          <label style="font-weight: 600; font-size: 0.85rem; margin-bottom: 6px;">Mensagem para o produtor (Mínimo 10 caracteres) *</label>
+          <textarea [(ngModel)]="interestForm.message" 
+                    placeholder="Escreva a sua proposta, condições de transporte ou dúvidas... (ex: Tenho muito interesse em comprar este lote, gostava de saber se entrega em Maputo.)" 
+                    rows="4" 
+                    class="market-textarea"
+                    style="width: 100%; border-radius: 8px; border: 1px solid #ccc; padding: 10px; font-family: inherit; font-size: 0.9rem; resize: vertical; box-sizing: border-box;"></textarea>
+          <span class="char-count" [ngClass]="{'error-text': interestForm.message.length < 10 && interestForm.message.length > 0}" style="font-size: 0.75rem; color: #666; margin-top: 4px; display: block;">
+            Caracteres: {{ interestForm.message.length }} / Mínimo: 10
+            <span *ngIf="interestForm.message.length > 0 && interestForm.message.length < 10" style="color: #e53935; font-weight: bold; margin-left: 10px;">(Insira pelo menos 10 caracteres)</span>
+          </span>
+        </div>
+
+        <!-- Quantidade Pretendida (opcional) -->
+        <div class="dialog-field" style="margin-bottom: 16px; display: flex; flex-direction: column;">
+          <label style="font-weight: 600; font-size: 0.85rem; margin-bottom: 6px;">Quantidade pretendida (opcional, em {{ selectedOffer.unidade }})</label>
+          <input type="number" [(ngModel)]="interestForm.quantity" [placeholder]="'Ex: ' + selectedOffer.quantidade"
+                 style="width: 100%; border-radius: 8px; border: 1px solid #ccc; padding: 10px; font-family: inherit; font-size: 0.9rem; box-sizing: border-box;">
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer-actions">
+      <button mat-button class="cancel-btn" (click)="showInterestModal = false">Cancelar</button>
+      <button mat-flat-button color="primary" 
+              [disabled]="!interestForm.message || interestForm.message.trim().length < 10" 
+              (click)="submitInterest()">
+        Enviar Manifestação
+      </button>
     </div>
   </div>
 </div>

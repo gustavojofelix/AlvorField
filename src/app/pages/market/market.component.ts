@@ -16,6 +16,7 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { AuthService } from '../../services/auth.service';
 import { LocationService, Province } from '../../services/location.service';
 import { OfferService, Offer } from '../../services/offer.service';
+import { InterestService } from '../../services/interest.service';
 
 interface CustomAlert {
   id: number;
@@ -87,6 +88,7 @@ export class MarketComponent implements OnInit {
   showDetailModal = false;
   showAlertModal = false;
   showBidModal = false;
+  showInterestModal = false;
 
   // Forms
   alertForm = {
@@ -105,6 +107,11 @@ export class MarketComponent implements OnInit {
     unidade: 'kg' as 'kg' | 'ton'
   };
 
+  interestForm = {
+    message: '',
+    quantity: null as number | null
+  };
+
   // Provinces list derived for filters dropdown
   provincias: string[] = [];
 
@@ -112,6 +119,7 @@ export class MarketComponent implements OnInit {
     private authService: AuthService,
     private locationService: LocationService,
     private offerService: OfferService,
+    private interestService: InterestService,
     private router: Router,
     private snack: MatSnackBar
   ) {}
@@ -330,6 +338,42 @@ export class MarketComponent implements OnInit {
   closeDetail(): void {
     this.selectedOffer = null;
     this.showDetailModal = false;
+  }
+
+  // RF-31, RF-32
+  openInterest(offer: Offer, event?: Event): void {
+    if (event) event.stopPropagation();
+    this.selectedOffer = offer;
+    this.interestForm.message = '';
+    this.interestForm.quantity = null;
+    this.showInterestModal = true;
+  }
+
+  submitInterest(): void {
+    if (!this.selectedOffer) return;
+
+    if (!this.interestForm.message || this.interestForm.message.trim().length < 10) {
+      this.snack.open('A mensagem é obrigatória e deve ter pelo menos 10 caracteres.', 'OK', { duration: 3000 });
+      return;
+    }
+
+    try {
+      this.interestService.createInterest(
+        this.selectedOffer,
+        this.interestForm.message,
+        this.interestForm.quantity
+      );
+
+      this.snack.open(`Manifestação de interesse enviada com sucesso para ${this.selectedOffer.produtorNome}!`, 'Excelente', {
+        duration: 4000,
+        panelClass: ['snackbar-success']
+      });
+
+      this.showInterestModal = false;
+      this.showDetailModal = false;
+    } catch (e: any) {
+      this.snack.open(e.message || 'Erro ao registar interesse.', 'OK', { duration: 3000 });
+    }
   }
 
   // Proposta Directa

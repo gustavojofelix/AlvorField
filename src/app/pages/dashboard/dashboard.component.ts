@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { AuthService, User } from '../../services/auth.service';
 import { LocationService, Province } from '../../services/location.service';
 import { OfferService, Offer, OfferStatus } from '../../services/offer.service';
+import { InterestService, Interest } from '../../services/interest.service';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -192,10 +193,12 @@ export class DashboardComponent implements OnInit {
   // 1. Dados Específicos do Produtor
   produtorOffers: Offer[] = [];
   buyerProposals: BuyerProposal[] = [];
+  receivedInterests: Interest[] = [];
 
   // 2. Dados Específicos do Comprador
   availableOffers: Offer[] = [];
   myPurchaseRequests: PurchaseRequest[] = [];
+  sentInterests: Interest[] = [];
 
   // 3. Dados Específicos do Investidor
   investmentProjects: InvestmentProject[] = [];
@@ -207,6 +210,7 @@ export class DashboardComponent implements OnInit {
     private authService: AuthService,
     private locationService: LocationService,
     private offerService: OfferService,
+    private interestService: InterestService,
     private router: Router,
     private snack: MatSnackBar
   ) {}
@@ -219,6 +223,7 @@ export class DashboardComponent implements OnInit {
     this.provincesList = this.locationService.getProvinces();
     this.loadMockData();
     this.loadOffers();
+    this.loadInterests();
   }
 
   private setGreeting(): void {
@@ -651,6 +656,47 @@ export class DashboardComponent implements OnInit {
     proposal.status = 'Recusado';
     localStorage.setItem('alvor_buyer_proposals', JSON.stringify(this.buyerProposals));
     this.snack.open(`Proposta da ${proposal.comprador} recusada.`, 'OK', { duration: 3000 });
+  }
+
+  loadInterests(): void {
+    if (!this.user) return;
+    this.receivedInterests = this.interestService.getReceivedInterests(this.user.id);
+    this.sentInterests = this.interestService.getSentInterests(this.user.id);
+  }
+
+  // RF-35, RF-36
+  acceptInterest(interest: Interest): void {
+    try {
+      this.interestService.acceptInterest(interest.id);
+      this.snack.open(`Contacto de ${interest.compradorNome} ACEITO com sucesso! O comprador foi notificado por SMS.`, 'Excelente', {
+        duration: 4000,
+        panelClass: ['snackbar-success']
+      });
+      // Atualizar conexões
+      this.connections.unshift({
+        produtor: this.user?.nome || 'Eu',
+        consumidor: interest.compradorNome,
+        distrito: `${this.user?.distrito} → KaMpfumo`,
+        produto: interest.produto,
+        quantidade: interest.quantidadePretendida ? `${interest.quantidadePretendida} ${interest.unidade}` : 'N/A',
+        status: 'Contacto Partilhado',
+        timestamp: 'Agora mesmo'
+      });
+      this.loadInterests();
+    } catch (e: any) {
+      this.snack.open(e.message || 'Erro ao aceitar contacto.', 'OK', { duration: 3000 });
+    }
+  }
+
+  // RF-35
+  refuseInterest(interest: Interest): void {
+    try {
+      this.interestService.refuseInterest(interest.id);
+      this.snack.open(`Manifestação de interesse de ${interest.compradorNome} recusada.`, 'OK', { duration: 3000 });
+      this.loadInterests();
+    } catch (e: any) {
+      this.snack.open(e.message || 'Erro ao recusar contacto.', 'OK', { duration: 3000 });
+    }
   }
 
   // ==========================================
