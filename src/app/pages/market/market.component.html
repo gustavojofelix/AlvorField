@@ -1,0 +1,634 @@
+<div class="market-page-container">
+  <!-- Top Navigation/Control Bar -->
+  <div class="market-top-bar animate-fade-in">
+    <div class="title-section">
+      <div class="icon-circle">
+        <mat-icon>travel_explore</mat-icon>
+      </div>
+      <div>
+        <h1>Descoberta de Ofertas Rurais</h1>
+        <p>Explore as colheitas ativas em Moçambique e conecte-se diretamente com machambas.</p>
+      </div>
+    </div>
+    
+    <div class="bar-actions">
+      <!-- GPS Control -->
+      <button mat-stroked-button (click)="obterLocalizacaoComprador(true)" [disabled]="gpsLoading" class="gps-btn">
+        <mat-icon [ngClass]="{'gps-active': gpsAllowed, 'spin': gpsLoading}">
+          {{ gpsLoading ? 'hourglass_empty' : (gpsAllowed ? 'gps_fixed' : 'gps_not_fixed') }}
+        </mat-icon>
+        {{ gpsLoading ? 'A localizar...' : (gpsAllowed ? 'GPS Ativo (Recalculado)' : 'Ativar GPS Local') }}
+      </button>
+
+      <!-- Alert Setup -->
+      <button mat-flat-button color="accent" (click)="openCreateAlert()" class="alert-btn">
+        <mat-icon>notifications_active</mat-icon>
+        Criar Alerta de Cotação
+      </button>
+    </div>
+  </div>
+
+  <!-- Main Split Layout -->
+  <div class="market-split-layout">
+    
+    <!-- LEFT SIDE: Filters & List Results -->
+    <div class="results-column animate-fade-in" [ngClass]="{'hide-on-mobile': viewMode === 'map'}">
+      
+      <!-- Rich Filter Panel (Glassmorphism card) -->
+      <div class="filter-panel-card">
+        <div class="panel-header">
+          <h3><mat-icon>tune</mat-icon> Filtros de Pesquisa Avançados</h3>
+          <button mat-button color="warn" (click)="clearFilters()" *ngIf="searchQuery || selectedProducts.length > 0 || selectedProvince !== 'Todas' || minVolume || maxPrice || startDate || endDate || onlyFavorites">
+            Limpar Filtros
+          </button>
+        </div>
+
+        <div class="filter-grid">
+          <!-- Text Search -->
+          <div class="filter-item search-box">
+            <label>Pesquisa Geral</label>
+            <div class="input-wrapper">
+              <mat-icon>search</mat-icon>
+              <input type="text" [(ngModel)]="searchQuery" (input)="currentPage = 1" placeholder="Pesquisar por produtor, produto, distrito...">
+            </div>
+          </div>
+
+          <!-- Province selection -->
+          <div class="filter-item">
+            <label>Província</label>
+            <select class="market-select" [(ngModel)]="selectedProvince" (change)="onProvinceChange()">
+              @for (prov of provincias; track prov) {
+                <option [value]="prov">{{ prov }}</option>
+              }
+            </select>
+          </div>
+
+          <!-- District selection -->
+          <div class="filter-item">
+            <label>Distrito</label>
+            <select class="market-select" [(ngModel)]="selectedDistrict" [disabled]="selectedProvince === 'Todas'">
+              <option value="Todos">Todos os distritos</option>
+              @for (dist of districtsList; track dist) {
+                @if (dist !== 'Todos') {
+                  <option [value]="dist">{{ dist }}</option>
+                }
+              }
+            </select>
+          </div>
+
+          <!-- Min Volume -->
+          <div class="filter-item volume-filter">
+            <label>Volume Mínimo</label>
+            <div class="volume-input-group">
+              <input type="number" [(ngModel)]="minVolume" (input)="currentPage = 1" placeholder="Ex: 500">
+              <select [(ngModel)]="minVolumeUnit" (change)="currentPage = 1">
+                <option value="kg">kg</option>
+                <option value="ton">ton</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Max Price -->
+          <div class="filter-item">
+            <label>Preço Máximo (MZN)</label>
+            <div class="input-wrapper">
+              <span class="currency-tag">MT</span>
+              <input type="number" [(ngModel)]="maxPrice" (input)="currentPage = 1" placeholder="Ex: 50">
+            </div>
+          </div>
+
+          <!-- Availability Dates -->
+          <div class="filter-item date-filter">
+            <label>Disponibilidade (Início - Fim)</label>
+            <div class="date-input-group">
+              <input type="date" [(ngModel)]="startDate" (change)="currentPage = 1">
+              <span class="range-separator">até</span>
+              <input type="date" [(ngModel)]="endDate" (change)="currentPage = 1">
+            </div>
+          </div>
+        </div>
+
+        <!-- Horizontal Predefined Products chips -->
+        <div class="product-chips-section">
+          <label>Filtrar por Cultura</label>
+          <div class="chips-scroll-container">
+            @for (prod of productsList; track prod) {
+              <div class="product-chip" 
+                   [ngClass]="{'active': selectedProducts.includes(prod)}" 
+                   [style.border-left-color]="getProductColor(prod)"
+                   (click)="toggleProductFilter(prod)">
+                <span class="chip-dot" [style.background]="getProductColor(prod)"></span>
+                {{ prod }}
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- Favorites & Mode Toggle footer -->
+        <div class="filter-footer-actions">
+          <mat-checkbox [(ngModel)]="onlyFavorites" (change)="currentPage = 1" color="primary">
+            <mat-icon style="vertical-align: middle; color: #d32f2f; font-size: 18px; width:18px; height:18px;">favorite</mat-icon>
+            Apenas Favoritos ({{ favorites.length }} guardados)
+          </mat-checkbox>
+
+          <!-- Toggle Views on mobile -->
+          <div class="layout-toggle-group">
+            <button mat-icon-button [ngClass]="{'active-view': viewMode === 'list'}" (click)="viewMode = 'list'" title="Ver Lista Apenas">
+              <mat-icon>list</mat-icon>
+            </button>
+            <button mat-icon-button [ngClass]="{'active-view': viewMode === 'split'}" (click)="viewMode = 'split'" title="Ver Lado a Lado">
+              <mat-icon>dashboard_customize</mat-icon>
+            </button>
+            <button mat-icon-button [ngClass]="{'active-view': viewMode === 'map'}" (click)="viewMode = 'map'" title="Ver Mapa Apenas">
+              <mat-icon>map</mat-icon>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Active Alerts Section -->
+      <div class="active-alerts-panel" *ngIf="activeAlerts.length > 0">
+        <h4 class="alerts-title"><mat-icon>notifications</mat-icon> Seus Alertas de Cotação Ativos ({{ activeAlerts.length }})</h4>
+        <div class="alerts-container">
+          @for (alert of activeAlerts; track alert.id) {
+            <div class="alert-badge-item">
+              <div class="alert-info">
+                <strong>{{ alert.produto }}</strong> em <em>{{ alert.provincia }}</em>
+                <span class="alert-sub" *ngIf="alert.precoMaximo || alert.volumeMinimo">
+                  ({{ alert.volumeMinimo ? alert.volumeMinimo + ' ' + alert.volumeUnidade : '' }} 
+                  {{ alert.precoMaximo ? ' / máx: ' + alert.precoMaximo + ' MT' : '' }})
+                </span>
+              </div>
+              <button mat-icon-button color="warn" (click)="removeAlert(alert.id)" title="Excluir Alerta">
+                <mat-icon style="font-size: 16px; width: 16px; height: 16px;">close</mat-icon>
+              </button>
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Results Count -->
+      <div class="results-header">
+        <span>Encontradas <strong>{{ filteredOffers.length }}</strong> ofertas ativas</span>
+      </div>
+
+      <!-- Offer Lists Paged (RF-26) -->
+      <div class="offers-list-container">
+        @if (filteredOffers.length === 0) {
+          <div class="empty-results-box">
+            <mat-icon>search_off</mat-icon>
+            <h4>Nenhuma oferta activa atende a estes critérios.</h4>
+            <p>Tente ajustar os filtros ou limpar a pesquisa.</p>
+          </div>
+        } @else {
+          @for (offer of paginatedOffers; track offer.id) {
+            <div class="offer-result-card animate-slide-up" (click)="openDetail(offer)">
+              <!-- Card Photo / Color stripe -->
+              <div class="card-image-placeholder" [style.background]="'linear-gradient(135deg, ' + getProductColor(offer.produto) + '22, ' + getProductColor(offer.produto) + '44)'">
+                @if (offer.fotos && offer.fotos.length > 0) {
+                  <img [src]="offer.fotos[0]" alt="Foto do produto">
+                } @else {
+                  <mat-icon [style.color]="getProductColor(offer.produto)">{{ getProductIcon(offer.produto) }}</mat-icon>
+                }
+                <button mat-icon-button class="card-favorite-btn" (click)="toggleFavorite(offer.id, $event)">
+                  <mat-icon [style.color]="isFavorite(offer.id) ? '#d32f2f' : '#777'">
+                    {{ isFavorite(offer.id) ? 'favorite' : 'favorite_border' }}
+                  </mat-icon>
+                </button>
+              </div>
+
+              <!-- Content details -->
+              <div class="card-details-box">
+                <div class="card-header-row">
+                  <span class="province-tag"><mat-icon>place</mat-icon> {{ offer.distrito }}, {{ offer.provincia }}</span>
+                  <span class="distance-tag" *ngIf="offer.latitude">
+                    <mat-icon>near_me</mat-icon> ~{{ calculateDistance(offer.latitude, offer.longitude) }} km
+                  </span>
+                </div>
+
+                <h3 class="product-title">{{ offer.produto }}</h3>
+                <span class="producer-name">Produtor: <strong>{{ offer.produtorNome }}</strong></span>
+
+                <div class="offer-specs-row">
+                  <div class="spec-block">
+                    <span class="label">Disponível</span>
+                    <strong class="val">{{ offer.quantidade }} {{ offer.unidade }}</strong>
+                  </div>
+                  <div class="spec-block">
+                    <span class="label">Preço Unitário</span>
+                    <strong class="val green">{{ offer.precoUnitario }} MZN/{{ offer.unidade }}</strong>
+                  </div>
+                </div>
+
+                <!-- Footer details (Dates) -->
+                <div class="card-footer-row">
+                  <span class="valid-date">
+                    <mat-icon>calendar_today</mat-icon>
+                    Expira em: {{ offer.dataFim | date:'dd/MM/yyyy' }}
+                  </span>
+                  <button mat-flat-button color="primary" class="card-bid-btn" (click)="openBid(offer, $event)">
+                    Fazer Proposta
+                  </button>
+                </div>
+              </div>
+            </div>
+          }
+
+          <!-- Pagination Controls -->
+          <div class="pagination-controls" *ngIf="totalPages > 1">
+            <button mat-stroked-button [disabled]="currentPage === 1" (click)="setPage(currentPage - 1)">
+              <mat-icon>chevron_left</mat-icon> Anterior
+            </button>
+            <span class="page-indicator">Página <strong>{{ currentPage }}</strong> de {{ totalPages }}</span>
+            <button mat-stroked-button [disabled]="currentPage === totalPages" (click)="setPage(currentPage + 1)">
+              Seguinte <mat-icon>chevron_right</mat-icon>
+            </button>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- RIGHT SIDE: Mozambique Interactive Map (RF-23 / RF-24) -->
+    <div class="map-column" [ngClass]="{'hide-on-mobile': viewMode === 'list', 'full-width': viewMode === 'map'}">
+      <div class="map-wrapper-card">
+        <div class="map-header">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <mat-icon>map</mat-icon>
+            <h3>Distribuição Geográfica de Ofertas</h3>
+          </div>
+          <span class="map-helper">Filtros aplicados determinam os marcadores visíveis</span>
+        </div>
+
+        <div class="map-canvas-container">
+          <!-- Mozambique Coast & Border Grid Map -->
+          <div class="map-grid-mesh">
+            <!-- Simulated coordinate lines -->
+            <div class="latitude-line" style="top: 20%;"><span class="grid-coord">-13.0° S</span></div>
+            <div class="latitude-line" style="top: 50%;"><span class="grid-coord">-18.5° S</span></div>
+            <div class="latitude-line" style="top: 80%;"><span class="grid-coord">-24.0° S</span></div>
+
+            <div class="longitude-line" style="left: 20%;"><span class="grid-coord">32.0° E</span></div>
+            <div class="longitude-line" style="left: 50%;"><span class="grid-coord">35.5° E</span></div>
+            <div class="longitude-line" style="left: 80%;"><span class="grid-coord">39.0° E</span></div>
+
+            <!-- Stylized Coastline Vector representation of Mozambique -->
+            <svg class="mozambique-svg-coast" viewBox="0 0 400 600" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="oceanGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#e0f2f1" />
+                  <stop offset="100%" stop-color="#b2dfdb" />
+                </linearGradient>
+                <linearGradient id="landGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stop-color="#f1f8e9" />
+                  <stop offset="100%" stop-color="#dcedc8" />
+                </linearGradient>
+              </defs>
+              
+              <!-- Land Background Shape -->
+              <path d="M 50,550 
+                       L 110,480 
+                       L 130,420 
+                       L 190,390 
+                       L 180,330 
+                       L 230,300 
+                       L 270,300 
+                       L 310,240 
+                       L 360,200 
+                       L 380,100 
+                       L 340,60 
+                       L 270,90 
+                       L 250,50 
+                       L 200,100 
+                       L 180,180 
+                       L 130,220 
+                       L 120,290 
+                       L 80,310 
+                       L 90,380 
+                       L 70,440 
+                       L 40,490 
+                       L 30,550 Z" 
+                    fill="url(#landGrad)" 
+                    stroke="#aed581" 
+                    stroke-width="3" 
+                    stroke-linejoin="round" />
+
+              <!-- Major Cities Label Points -->
+              <circle cx="65" cy="530" r="4" fill="#558b2f" opacity="0.8"/>
+              <text x="75" y="534" font-size="10" fill="#33691e" font-weight="bold">Maputo</text>
+
+              <circle cx="160" cy="350" r="4" fill="#558b2f" opacity="0.8"/>
+              <text x="170" y="354" font-size="10" fill="#33691e" font-weight="bold">Beira</text>
+
+              <circle cx="210" cy="280" r="4" fill="#558b2f" opacity="0.8"/>
+              <text x="220" y="284" font-size="10" fill="#33691e" font-weight="bold">Quelimane</text>
+
+              <circle cx="340" cy="180" r="4" fill="#558b2f" opacity="0.8"/>
+              <text x="300" y="184" font-size="10" fill="#33691e" font-weight="bold">Nampula</text>
+
+              <circle cx="360" cy="100" r="4" fill="#558b2f" opacity="0.8"/>
+              <text x="325" y="104" font-size="10" fill="#33691e" font-weight="bold">Pemba</text>
+            </svg>
+          </div>
+
+          <!-- Dynamic Pins plotted based on GPS coordinates -->
+          @for (offer of filteredOffers; track offer.id) {
+            <div class="map-pin-container"
+                 [style.left.%]="getMarkerX(offer.longitude)"
+                 [style.top.%]="getMarkerY(offer.latitude)"
+                 (click)="openDetail(offer)"
+                 [title]="offer.produto + ' - ' + offer.produtorNome">
+              
+              <!-- Hover popup tooltip -->
+              <div class="pin-popup-tooltip">
+                <span class="tip-prod">{{ offer.produto }}</span>
+                <span class="tip-price">{{ offer.precoUnitario }} MT/{{ offer.unidade }}</span>
+                <span class="tip-qty">{{ offer.quantidade }} {{ offer.unidade }}</span>
+                <span class="tip-dist">~{{ calculateDistance(offer.latitude, offer.longitude) }} km</span>
+              </div>
+
+              <!-- Animated marker beacon -->
+              <div class="pin-beacon" [style.background]="getProductColor(offer.produto)"></div>
+              
+              <!-- Pin icon button with product-specific color -->
+              <div class="pin-marker" [style.background]="getProductColor(offer.produto)">
+                <mat-icon>{{ getProductIcon(offer.produto) }}</mat-icon>
+              </div>
+            </div>
+          }
+          
+          <!-- Buyer's Location Pin if GPS is active -->
+          <div class="map-pin-container buyer-gps-pin"
+               *ngIf="gpsAllowed"
+               [style.left.%]="getMarkerX(buyerLng)"
+               [style.top.%]="getMarkerY(buyerLat)">
+            <div class="pin-popup-tooltip">
+              <strong>Sua Localização</strong>
+            </div>
+            <div class="pin-beacon-buyer"></div>
+            <div class="pin-marker-buyer">
+              <mat-icon>person_pin</mat-icon>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ========================================================== -->
+<!-- MODAL A: DETALHE DA OFERTA (RF-28) -->
+<!-- ========================================================== -->
+<div class="market-modal-overlay" *ngIf="showDetailModal">
+  <div class="market-modal-card animate-scale-in" *ngIf="selectedOffer">
+    <div class="modal-header-banner" [style.background]="'linear-gradient(135deg, ' + getProductColor(selectedOffer.produto) + ', ' + getProductColor(selectedOffer.produto) + 'cc)'">
+      <div class="banner-title-box">
+        <mat-icon class="banner-icon">{{ getProductIcon(selectedOffer.produto) }}</mat-icon>
+        <div>
+          <h2>{{ selectedOffer.produto }}</h2>
+          <span>Disponível em {{ selectedOffer.distrito }}, {{ selectedOffer.provincia }}</span>
+        </div>
+      </div>
+      <button class="modal-close-btn" (click)="closeDetail()"><mat-icon>close</mat-icon></button>
+    </div>
+
+    <div class="modal-body-scrollable">
+      
+      <!-- Photos Carousel simulated or base64 -->
+      <div class="detail-gallery-container">
+        @if (selectedOffer.fotos && selectedOffer.fotos.length > 0) {
+          <div class="gallery-slider">
+            <img *ngFor="let img of selectedOffer.fotos" [src]="img" alt="Foto da colheita">
+          </div>
+        } @else {
+          <div class="no-photo-placeholder" [style.color]="getProductColor(selectedOffer.produto)">
+            <mat-icon style="font-size: 64px; width: 64px; height: 64px;">image</mat-icon>
+            <p>Nenhuma foto anexada a esta oferta</p>
+          </div>
+        }
+      </div>
+
+      <!-- Core metrics split grid -->
+      <div class="detail-metrics-grid">
+        <div class="metric-block">
+          <span class="m-label">Preço Base</span>
+          <strong class="m-val price-green">{{ selectedOffer.precoUnitario }} MZN / {{ selectedOffer.unidade }}</strong>
+        </div>
+        <div class="metric-block">
+          <span class="m-label">Volume Total</span>
+          <strong class="m-val">{{ selectedOffer.quantidade }} {{ selectedOffer.unidade }}</strong>
+        </div>
+        <div class="metric-block">
+          <span class="m-label">Disponibilidade</span>
+          <strong class="m-val small-font">
+            De: {{ selectedOffer.dataInicio | date:'dd/MM/yyyy' }}<br>
+            Até: {{ selectedOffer.dataFim | date:'dd/MM/yyyy' }}
+          </strong>
+        </div>
+        <div class="metric-block">
+          <span class="m-label">Localização (GPS)</span>
+          <strong class="m-val small-font" *ngIf="selectedOffer.latitude">
+            Lat: {{ selectedOffer.latitude }}<br>
+            Lng: {{ selectedOffer.longitude }}
+          </strong>
+          <strong class="m-val small-font" *ngIf="!selectedOffer.latitude">Não fornecido</strong>
+        </div>
+      </div>
+
+      <mat-divider></mat-divider>
+
+      <!-- Producer Metadata section (RF-28) -->
+      <div class="producer-profile-block">
+        <h3>Dados do Vendedor / Produtor</h3>
+        <div class="profile-card-horizontal">
+          <div class="profile-avatar">
+            <mat-icon>agriculture</mat-icon>
+          </div>
+          <div class="profile-credentials">
+            <h4>{{ selectedOffer.produtorNome }}</h4>
+            <div class="badges-row">
+              <!-- Reputation -->
+              <span class="badge rating">
+                <mat-icon>star</mat-icon> 
+                {{ selectedOffer.produtorReputacao || 4.7 }} / 5.0
+              </span>
+              <!-- Transactions -->
+              <span class="badge transactions">
+                <mat-icon>handshake</mat-icon> 
+                {{ selectedOffer.produtorTransacoes || 18 }} negócios fechados
+              </span>
+            </div>
+            <p class="verification-text"><mat-icon>verified</mat-icon> Produtor Verificado por AlvorField</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Distance and Logistics details -->
+      <div class="logistics-box" *ngIf="selectedOffer.latitude">
+        <mat-icon>local_shipping</mat-icon>
+        <div class="log-text">
+          <h4>Logística & Distância Estimada</h4>
+          <p>Esta machamba fica a aproximadamente <strong>~{{ calculateDistance(selectedOffer.latitude, selectedOffer.longitude) }} km</strong> da sua localização atual.</p>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Modal Actions -->
+    <div class="modal-footer-actions">
+      <button mat-button class="cancel-btn" (click)="closeDetail()">Fechar</button>
+      <button mat-stroked-button (click)="toggleFavorite(selectedOffer.id)" class="fav-action-btn">
+        <mat-icon [style.color]="isFavorite(selectedOffer.id) ? '#d32f2f' : '#777'">
+          {{ isFavorite(selectedOffer.id) ? 'favorite' : 'favorite_border' }}
+        </mat-icon>
+        {{ isFavorite(selectedOffer.id) ? 'Favoritada' : 'Guardar nos Favoritos' }}
+      </button>
+      <button mat-flat-button color="primary" (click)="openBid(selectedOffer)" class="proposal-action-btn">
+        Fazer Proposta Directa
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ========================================================== -->
+<!-- MODAL B: CRIAR ALERTA DE COTAÇÃO (RF-30) -->
+<!-- ========================================================== -->
+<div class="market-modal-overlay" *ngIf="showAlertModal">
+  <div class="market-modal-card dialog-size animate-scale-in">
+    <div class="modal-header-banner alert-blue">
+      <div class="banner-title-box">
+        <mat-icon class="banner-icon">notifications_active</mat-icon>
+        <div>
+          <h2>Alerta de Cotação Personalizado</h2>
+          <span>Seja avisado quando houver novas ofertas de acordo com suas preferências</span>
+        </div>
+      </div>
+      <button class="modal-close-btn" (click)="showAlertModal = false"><mat-icon>close</mat-icon></button>
+    </div>
+
+    <div class="modal-body-scrollable pad-20">
+      <p class="instructions-p">Defina seus filtros de interesse. O sistema enviará notificações na aplicação e/ou SMS simulado assim que um produtor registrar uma oferta compatível.</p>
+      
+      <!-- Alert Form fields -->
+      <div class="dialog-form">
+        <!-- Produto -->
+        <div class="dialog-field">
+          <label>Cultura / Produto de Interesse *</label>
+          <select class="market-select" [(ngModel)]="alertForm.produto">
+            <option value="" disabled selected>Seleccione um produto...</option>
+            @for (prod of productsList; track prod) {
+              <option [value]="prod">{{ prod }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="form-row-2col">
+          <!-- Province -->
+          <div class="dialog-field">
+            <label>Província</label>
+            <select class="market-select" [(ngModel)]="alertForm.provincia" (change)="onAlertProvinceChange()">
+              <option value="Todas">Todas as Províncias</option>
+              @for (prov of provincesList; track prov.nome) {
+                <option [value]="prov.nome">{{ prov.nome }}</option>
+              }
+            </select>
+          </div>
+
+          <!-- District -->
+          <div class="dialog-field">
+            <label>Distrito</label>
+            <select class="market-select" [(ngModel)]="alertForm.distrito" [disabled]="alertForm.provincia === 'Todas'">
+              <option value="Todos">Todos os Distritos</option>
+              @for (dist of districtsList; track dist) {
+                @if (dist !== 'Todos') {
+                  <option [value]="dist">{{ dist }}</option>
+                }
+              }
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row-2col">
+          <!-- Min volume -->
+          <div class="dialog-field">
+            <label>Volume Mínimo</label>
+            <div class="volume-input-group">
+              <input type="number" [(ngModel)]="alertForm.volumeMinimo" placeholder="Sem limite mín">
+              <select [(ngModel)]="alertForm.volumeUnidade">
+                <option value="kg">kg</option>
+                <option value="ton">ton</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Max price -->
+          <div class="dialog-field">
+            <label>Preço Máximo Unitário (MZN)</label>
+            <input type="number" [(ngModel)]="alertForm.precoMaximo" placeholder="Sem limite máx">
+          </div>
+        </div>
+
+        <!-- Channels (SMS / In-App) -->
+        <div class="dialog-field">
+          <label>Canais de Notificação (RF-30)</label>
+          <div class="checkbox-options-row">
+            <mat-checkbox [(ngModel)]="alertForm.canais.app" color="primary">Dentro da aplicação (Push)</mat-checkbox>
+            <mat-checkbox [(ngModel)]="alertForm.canais.sms" color="primary">Mensagem SMS de texto</mat-checkbox>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer-actions">
+      <button mat-button class="cancel-btn" (click)="showAlertModal = false">Cancelar</button>
+      <button mat-flat-button color="accent" (click)="createAlert()">Ativar Alerta</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========================================================== -->
+<!-- MODAL C: PROPOSTA DE COMPRA DIRECTA -->
+<!-- ========================================================== -->
+<div class="market-modal-overlay" *ngIf="showBidModal">
+  <div class="market-modal-card dialog-size animate-scale-in">
+    <div class="modal-header-banner bid-green">
+      <div class="banner-title-box">
+        <mat-icon class="banner-icon">handshake</mat-icon>
+        <div>
+          <h2>Enviar Proposta Directa</h2>
+          <span>Envie uma oferta de negociação rápida de preços ao produtor</span>
+        </div>
+      </div>
+      <button class="modal-close-btn" (click)="showBidModal = false"><mat-icon>close</mat-icon></button>
+    </div>
+
+    <div class="modal-body-scrollable pad-20" *ngIf="selectedOffer">
+      <div class="negotiation-summary-box">
+        <div class="summary-line"><span>Cultura:</span> <strong>{{ selectedOffer.produto }}</strong></div>
+        <div class="summary-line"><span>Produtor:</span> <strong>{{ selectedOffer.produtorNome }}</strong></div>
+        <div class="summary-line"><span>Preço de referência:</span> <strong>{{ selectedOffer.precoUnitario }} MZN/{{ selectedOffer.unidade }}</strong></div>
+        <div class="summary-line"><span>Total disponível:</span> <strong>{{ selectedOffer.quantidade }} {{ selectedOffer.unidade }}</strong></div>
+      </div>
+
+      <div class="dialog-form">
+        <!-- Quantidade -->
+        <div class="dialog-field">
+          <label>Quantidade desejada ({{ selectedOffer.unidade }}) *</label>
+          <input type="number" [(ngModel)]="newBid.quantidade" placeholder="Ex: 500">
+        </div>
+
+        <!-- Preço oferecido -->
+        <div class="dialog-field">
+          <label>Preço unitário oferecido (MZN / {{ selectedOffer.unidade }}) *</label>
+          <input type="number" [(ngModel)]="newBid.preco" placeholder="Ex: 40">
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer-actions">
+      <button mat-button class="cancel-btn" (click)="showBidModal = false">Cancelar</button>
+      <button mat-flat-button color="primary" (click)="submitBid()">Enviar Proposta</button>
+    </div>
+  </div>
+</div>

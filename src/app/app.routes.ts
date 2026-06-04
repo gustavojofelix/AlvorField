@@ -41,6 +41,15 @@ export const routes: Routes = [
     title: 'Meu Perfil — AlvorField',
   },
   {
+    path: 'mercado',
+    loadComponent: () =>
+      import('./pages/market/market.component').then(
+        (m) => m.MarketComponent
+      ),
+    canActivate: [authGuard],
+    title: 'Pesquisa de Ofertas — AlvorField',
+  },
+  {
     path: '',
     redirectTo: 'dashboard',
     pathMatch: 'full',

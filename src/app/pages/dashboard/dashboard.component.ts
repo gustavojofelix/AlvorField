@@ -500,7 +500,7 @@ export class DashboardComponent implements OnInit {
     } else if (actionName === 'scrollToProposals') {
       document.getElementById('propostas-seccao')?.scrollIntoView({ behavior: 'smooth' });
     } else if (actionName === 'scrollToMarket') {
-      document.getElementById('mercado-seccao')?.scrollIntoView({ behavior: 'smooth' });
+      this.router.navigate(['/mercado']);
     } else if (actionName === 'scrollToProjects') {
       document.getElementById('projetos-seccao')?.scrollIntoView({ behavior: 'smooth' });
     } else if (actionName === 'scrollToContracts') {

@@ -20,6 +20,8 @@ export interface Offer {
   fotos: string[]; // URLs de dados base64
   estado: OfferStatus;
   dataCriacao: number;
+  produtorReputacao?: number;
+  produtorTransacoes?: number;
 }
 
 @Injectable({
@@ -49,36 +51,45 @@ export class OfferService {
   }
 
   private initializeMockOffers(): void {
+    // Para fins de demonstração, sempre que não houver as novas ofertas ricas, vamos reinicializar
     const existing = localStorage.getItem(this.OFFERS_KEY);
-    if (!existing) {
+    let parsed: Offer[] = [];
+    try {
+      if (existing) parsed = JSON.parse(existing);
+    } catch (e) {}
+
+    // Se não existir ou se for a inicialização antiga básica, geramos as novas ricas
+    if (!existing || parsed.length <= 3) {
       const mockOffers: Offer[] = [
         {
           id: 1,
-          produtorId: 1, // Mateus Tembe
+          produtorId: 1,
           produtorNome: 'Mateus Tembe',
           produto: 'Tomate',
           quantidade: 2.5,
           unidade: 'ton',
           dataInicio: '2026-05-15',
-          dataFim: '2026-06-15',
-          precoUnitario: 45, // 45 MT/kg
+          dataFim: '2026-07-15',
+          precoUnitario: 45,
           provincia: 'Gaza',
           distrito: 'Bilene',
           latitude: -25.263,
           longitude: 33.242,
           fotos: [],
           estado: 'Activa',
-          dataCriacao: Date.now() - 5 * 24 * 60 * 60 * 1000
+          dataCriacao: Date.now() - 5 * 24 * 60 * 60 * 1000,
+          produtorReputacao: 4.8,
+          produtorTransacoes: 14
         },
         {
           id: 2,
-          produtorId: 1, // Mateus Tembe
+          produtorId: 1,
           produtorNome: 'Mateus Tembe',
           produto: 'Cebola Vermelha',
           quantidade: 1200,
           unidade: 'kg',
           dataInicio: '2026-05-20',
-          dataFim: '2026-06-20',
+          dataFim: '2026-07-20',
           precoUnitario: 55,
           provincia: 'Gaza',
           distrito: 'Bilene',
@@ -86,25 +97,109 @@ export class OfferService {
           longitude: 33.243,
           fotos: [],
           estado: 'Activa',
-          dataCriacao: Date.now() - 2 * 24 * 60 * 60 * 1000
+          dataCriacao: Date.now() - 2 * 24 * 60 * 60 * 1000,
+          produtorReputacao: 4.8,
+          produtorTransacoes: 14
         },
         {
           id: 3,
-          produtorId: 101, // Outro produtor de exemplo
+          produtorId: 101,
           produtorNome: 'Cooperativa de Chókwè',
           produto: 'Milho Branco',
           quantidade: 15,
           unidade: 'ton',
           dataInicio: '2026-04-01',
-          dataFim: '2026-05-01', // Data no passado para testar expiração
+          dataFim: '2026-05-01',
           precoUnitario: 24,
           provincia: 'Gaza',
           distrito: 'Chókwè',
           latitude: -24.524,
           longitude: 32.998,
           fotos: [],
-          estado: 'Activa', // Será alterado para Expirada na inicialização
-          dataCriacao: Date.now() - 60 * 24 * 60 * 60 * 1000
+          estado: 'Activa',
+          dataCriacao: Date.now() - 60 * 24 * 60 * 60 * 1000,
+          produtorReputacao: 4.5,
+          produtorTransacoes: 32
+        },
+        {
+          id: 4,
+          produtorId: 102,
+          produtorNome: 'Associação AgroNamaacha',
+          produto: 'Batata Doce',
+          quantidade: 3.5,
+          unidade: 'ton',
+          dataInicio: '2026-06-01',
+          dataFim: '2026-08-30',
+          precoUnitario: 35,
+          provincia: 'Maputo Província',
+          distrito: 'Namaacha',
+          latitude: -25.967,
+          longitude: 32.032,
+          fotos: [],
+          estado: 'Activa',
+          dataCriacao: Date.now() - 1 * 24 * 60 * 60 * 1000,
+          produtorReputacao: 4.9,
+          produtorTransacoes: 22
+        },
+        {
+          id: 5,
+          produtorId: 103,
+          produtorNome: 'Machamba do Limpopo',
+          produto: 'Amendoim',
+          quantidade: 850,
+          unidade: 'kg',
+          dataInicio: '2026-06-02',
+          dataFim: '2026-07-25',
+          precoUnitario: 65,
+          provincia: 'Gaza',
+          distrito: 'Limpopo',
+          latitude: -25.150,
+          longitude: 33.520,
+          fotos: [],
+          estado: 'Activa',
+          dataCriacao: Date.now(),
+          produtorReputacao: 4.2,
+          produtorTransacoes: 8
+        },
+        {
+          id: 6,
+          produtorId: 104,
+          produtorNome: 'Filipe Nhaca',
+          produto: 'Castanha de Caju',
+          quantidade: 10,
+          unidade: 'ton',
+          dataInicio: '2026-06-01',
+          dataFim: '2026-09-15',
+          precoUnitario: 75,
+          provincia: 'Nampula',
+          distrito: 'Monapo',
+          latitude: -14.922,
+          longitude: 40.435,
+          fotos: [],
+          estado: 'Activa',
+          dataCriacao: Date.now() - 3 * 24 * 60 * 60 * 1000,
+          produtorReputacao: 4.7,
+          produtorTransacoes: 41
+        },
+        {
+          id: 7,
+          produtorId: 105,
+          produtorNome: 'Cooperativa Búzi',
+          produto: 'Gergelim',
+          quantidade: 18,
+          unidade: 'ton',
+          dataInicio: '2026-06-03',
+          dataFim: '2026-10-30',
+          precoUnitario: 80,
+          provincia: 'Sofala',
+          distrito: 'Búzi',
+          latitude: -19.860,
+          longitude: 34.340,
+          fotos: [],
+          estado: 'Activa',
+          dataCriacao: Date.now(),
+          produtorReputacao: 4.6,
+          produtorTransacoes: 19
         }
       ];
       localStorage.setItem(this.OFFERS_KEY, JSON.stringify(mockOffers));
