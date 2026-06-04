@@ -220,6 +220,26 @@ export class DashboardComponent implements OnInit {
   investmentProjects: InvestmentProject[] = [];
   investedProjects: InvestedProject[] = [];
 
+  // Filtros do Investidor
+  investorFilters = {
+    produto: 'Todos',
+    dataInicio: '',
+    dataFim: '',
+    quantidadeMin: null as number | null,
+    quantidadeMax: null as number | null
+  };
+
+  // Solicitação de Relatório
+  showReportRequestModal = false;
+  customReportRequest = {
+    tema: '',
+    detalhes: '',
+    telefoneMpesa: '',
+    pinMpesa: '',
+    passoPagamento: 1, // 1: Preenchimento, 2: Pagamento M-Pesa, 3: Sucesso
+    processandoPagamento: false
+  };
+
   dashboardCards: { icon: string; title: string; description: string; color: string; action: string }[] = [];
 
   constructor(
@@ -1006,6 +1026,180 @@ export class DashboardComponent implements OnInit {
     });
     this.loadAdminData();
     this.loadOffers();
+  }
+
+  // ==========================================
+  // 4. AÇÕES DE INVESTIDOR (MÓDULO 6)
+  // ==========================================
+
+  get aggregatedOffers(): Array<{
+    produto: string;
+    provincia: string;
+    distrito: string;
+    volumeTotalKg: number;
+    quantidadeOfertas: number;
+    volumeFormatado: string;
+  }> {
+    const allActiveOffers = this.offerService.getPublicOffers();
+    
+    // Filtrar ofertas ativas
+    const filtered = allActiveOffers.filter(offer => {
+      // Filtrar por produto
+      if (this.investorFilters.produto !== 'Todos' && offer.produto !== this.investorFilters.produto) {
+        return false;
+      }
+      
+      // Quantidade normalizada em Kg
+      const qtyInKg = offer.unidade === 'ton' ? offer.quantidade * 1000 : offer.quantidade;
+      
+      // Filtrar por quantidade mínima
+      if (this.investorFilters.quantidadeMin !== null && this.investorFilters.quantidadeMin !== undefined && qtyInKg < this.investorFilters.quantidadeMin) {
+        return false;
+      }
+      // Filtrar por quantidade máxima
+      if (this.investorFilters.quantidadeMax !== null && this.investorFilters.quantidadeMax !== undefined && qtyInKg > this.investorFilters.quantidadeMax) {
+        return false;
+      }
+      
+      // Filtrar por período de disponibilidade
+      if (this.investorFilters.dataInicio) {
+        const filterStart = new Date(this.investorFilters.dataInicio);
+        const offerEnd = new Date(offer.dataFim);
+        if (offerEnd < filterStart) {
+          return false;
+        }
+      }
+      if (this.investorFilters.dataFim) {
+        const filterEnd = new Date(this.investorFilters.dataFim);
+        const offerStart = new Date(offer.dataInicio);
+        if (offerStart > filterEnd) {
+          return false;
+        }
+      }
+      
+      return true;
+    });
+    
+    // Agregar por produto e distrito
+    const map = new Map<string, {
+      produto: string;
+      provincia: string;
+      distrito: string;
+      volumeTotalKg: number;
+      quantidadeOfertas: number;
+      volumeFormatado: string;
+    }>();
+
+    filtered.forEach(o => {
+      const key = `${o.produto}|${o.provincia}|${o.distrito}`;
+      const qtyInKg = o.unidade === 'ton' ? o.quantidade * 1000 : o.quantidade;
+      
+      if (map.has(key)) {
+        const existing = map.get(key)!;
+        existing.volumeTotalKg += qtyInKg;
+        existing.quantidadeOfertas += 1;
+      } else {
+        map.set(key, {
+          produto: o.produto,
+          provincia: o.provincia,
+          distrito: o.distrito,
+          volumeTotalKg: qtyInKg,
+          quantidadeOfertas: 1,
+          volumeFormatado: ''
+        });
+      }
+    });
+    
+    // Formatar volumes
+    const result = Array.from(map.values());
+    result.forEach(r => {
+      if (r.volumeTotalKg >= 1000) {
+        r.volumeFormatado = `${(r.volumeTotalKg / 1000).toFixed(1)} Toneladas`;
+      } else {
+        r.volumeFormatado = `${r.volumeTotalKg} Kg`;
+      }
+    });
+    
+    // Ordenar por volume total decrescente
+    return result.sort((a, b) => b.volumeTotalKg - a.volumeTotalKg);
+  }
+
+  exportarDadosAgregadosCSV(): void {
+    const data = this.aggregatedOffers;
+    if (data.length === 0) {
+      this.snack.open('Não há dados agregados para exportar com os filtros atuais.', 'OK', { duration: 3000 });
+      return;
+    }
+    
+    let csvContent = '\ufeffProduto,Provincia,Distrito,Volume Total (Kg),Quantidade de Ofertas,Volume Formatado\n';
+    data.forEach(row => {
+      csvContent += `"${row.produto}","${row.provincia}","${row.distrito}",${row.volumeTotalKg},${row.quantidadeOfertas},"${row.volumeFormatado}"\n`;
+    });
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `alvorfield_dados_agregados_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    this.snack.open('Dados agregados exportados para CSV com sucesso!', 'Excelente', {
+      duration: 3500,
+      panelClass: ['snackbar-success']
+    });
+  }
+
+  abrirModalSolicitarRelatorio(): void {
+    this.customReportRequest = {
+      tema: '',
+      detalhes: '',
+      telefoneMpesa: '',
+      pinMpesa: '',
+      passoPagamento: 1,
+      processandoPagamento: false
+    };
+    this.showReportRequestModal = true;
+  }
+  
+  avancarParaPagamento(): void {
+    if (!this.customReportRequest.tema || !this.customReportRequest.detalhes) {
+      this.snack.open('Por favor, preencha o tema e os detalhes do relatório.', 'Erro', { duration: 3000 });
+      return;
+    }
+    this.customReportRequest.passoPagamento = 2;
+  }
+  
+  confirmarPagamentoMpesa(): void {
+    if (!this.customReportRequest.telefoneMpesa || !this.customReportRequest.pinMpesa) {
+      this.snack.open('Por favor, introduza o número M-Pesa e o PIN.', 'Erro', { duration: 3000 });
+      return;
+    }
+    
+    this.customReportRequest.processandoPagamento = true;
+    
+    // Simula tempo de processamento da transação M-Pesa
+    setTimeout(() => {
+      this.customReportRequest.processandoPagamento = false;
+      this.customReportRequest.passoPagamento = 3;
+      
+      this.snack.open('Pagamento M-Pesa simulado com sucesso!', 'OK', {
+        duration: 3000,
+        panelClass: ['snackbar-success']
+      });
+      
+      // Exibe no console o email simulado gerado para o administrador
+      console.log('--- EMAIL SIMULADO AO ADMINISTRADOR ---');
+      console.log('Para: admin@alvorfield.co.mz');
+      console.log('Assunto: Pedido de Relatório Personalizado - Pago via M-Pesa');
+      console.log(`Investidor: ${this.user?.nome} (ID: ${this.user?.id})`);
+      console.log(`Tema do Relatório: ${this.customReportRequest.tema}`);
+      console.log(`Detalhes: ${this.customReportRequest.detalhes}`);
+      console.log(`Pagamento M-Pesa: Confirmado (Telefone: ${this.customReportRequest.telefoneMpesa})`);
+      console.log('---------------------------------------');
+    }, 2000);
   }
 }
 

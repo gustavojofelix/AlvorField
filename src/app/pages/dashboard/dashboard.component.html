@@ -626,85 +626,173 @@
         </div>
       }
 
-      <!-- SEÇÃO EXCLUSIVA: INVESTIDOR (Projetos e Contratos) -->
+      <!-- SEÇÃO EXCLUSIVA: INVESTIDOR (Análise Agregada de Mercado) -->
       @if (user?.tipo === 'Investidor') {
-        <!-- Projetos de Financiamento Coletivo / Individual -->
-        <div class="section-container" id="projetos-seccao">
-          <div class="section-header">
-            <h3><mat-icon>diversity_3</mat-icon> Oportunidades de Investimento</h3>
-          </div>
-
-          <div class="projects-grid">
-            @for (project of investmentProjects; track project.id) {
-              <div class="project-card">
-                <div class="proj-category-row">
-                  <span class="proj-badge">{{ project.categoria }}</span>
-                  <span class="proj-roi">Retorno: <strong>{{ project.retorno }}</strong></span>
-                </div>
-
-                <h4 class="proj-title">{{ project.titulo }}</h4>
-                <p class="proj-produtor">Proponente: <strong>{{ project.produtor }}</strong></p>
-                <p class="proj-desc">{{ project.descricao }}</p>
-
-                <!-- Financiamento Progress -->
-                <div class="proj-progress-section">
-                  <div class="progress-labels">
-                    <span>Progresso</span>
-                    <strong>{{ (project.valorArrecadado / project.valorNecessario * 100) | number:'1.0-0' }}%</strong>
-                  </div>
-                  <mat-progress-bar mode="determinate" [value]="(project.valorArrecadado / project.valorNecessario * 100)" color="primary"></mat-progress-bar>
-                  <div class="progress-details">
-                    <span>Arrecadado: <strong>{{ project.valorArrecadado | number }} MT</strong></span>
-                    <span>Meta: <strong>{{ project.valorNecessario | number }} MT</strong></span>
-                  </div>
-                </div>
-
-                <button mat-flat-button color="primary" class="invest-btn" 
-                        [disabled]="project.valorArrecadado >= project.valorNecessario"
-                        (click)="openInvestModal(project)">
-                  {{ project.valorArrecadado >= project.valorNecessario ? 'Totalmente Financiado' : 'Apoiar Projecto' }}
+        <!-- Painel de Inteligência e Mapa de Calor Agregado -->
+        <div class="section-container" id="investor-intelligence">
+          <div class="section-header-filters" style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 24px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; flex-wrap: wrap; gap: 16px;">
+              <h3 style="margin: 0; font-size: 1.5rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                <mat-icon style="color: #2b78e4;">analytics</mat-icon> Mapa de Calor de Ofertas Agrícolas
+              </h3>
+              <div style="display: flex; gap: 12px;">
+                <button mat-stroked-button color="primary" (click)="exportarDadosAgregadosCSV()" style="height: 40px; border-radius: 8px;">
+                  <mat-icon>download</mat-icon> Exportar CSV
+                </button>
+                <button mat-flat-button color="primary" (click)="abrirModalSolicitarRelatorio()" style="height: 40px; border-radius: 8px; background-color: #2b78e4;">
+                  <mat-icon>description</mat-icon> Pedir Relatório Personalizado
                 </button>
               </div>
-            }
-          </div>
-        </div>
+            </div>
 
-        <!-- Contratos e Acompanhamento de Culturas -->
-        <div class="section-container" id="contratos-seccao">
-          <div class="section-header">
-            <h3><mat-icon>shield</mat-icon> Garantias Reais & Acompanhamento de Culturas</h3>
-          </div>
-
-          <div class="invested-list">
-            @if (investedProjects.length === 0) {
-              <div class="empty-state">
-                <mat-icon>account_balance_wallet</mat-icon>
-                <p>Nenhum investimento ativo. Apoie um projeto acima para acompanhar seu progresso.</p>
+            <!-- Filtros de Investidor (RF-46) -->
+            <div class="filters-row" style="background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; width: 100%; box-sizing: border-box;">
+              <!-- Filtro de Produto -->
+              <div class="form-group" style="margin: 0;">
+                <label style="font-weight: 600; display: block; margin-bottom: 6px; font-size: 0.8rem; color: #475569;">Cultura / Produto</label>
+                <select class="custom-select" [(ngModel)]="investorFilters.produto" style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1; background: #fff; height: 40px; font-size: 0.9rem;">
+                  <option value="Todos">Todos os Produtos</option>
+                  @for (prod of productsList; track prod) {
+                    <option [value]="prod">{{ prod }}</option>
+                  }
+                </select>
               </div>
-            } @else {
-              @for (inv of investedProjects; track inv.id) {
-                <div class="invested-item-card">
-                  <div class="inv-top">
-                    <div>
-                      <h4>{{ inv.titulo }}</h4>
-                      <span class="inv-amount">Meu aporte: <strong>{{ inv.investido | number }} MT</strong></span>
-                    </div>
-                    <div class="inv-status">
-                      <span class="lbl">Retorno Acumulado</span>
-                      <strong class="val text-green">+{{ inv.retornoAcumulado | number }} MT</strong>
-                    </div>
-                  </div>
 
-                  <div class="crop-progress-box">
-                    <div class="crop-labels">
-                      <span>Ciclo de Vida da Cultura: <strong>{{ inv.estagioCultura }}</strong></span>
-                      <span>Colheita: <strong>{{ inv.previsaoColheita }}</strong></span>
-                    </div>
-                    <mat-progress-bar mode="determinate" [value]="inv.progressoCultura" color="accent" class="crop-bar"></mat-progress-bar>
+              <!-- Filtro Período Disponibilidade - Início -->
+              <div class="form-group" style="margin: 0;">
+                <label style="font-weight: 600; display: block; margin-bottom: 6px; font-size: 0.8rem; color: #475569;">Disponível A Partir De</label>
+                <input type="date" [(ngModel)]="investorFilters.dataInicio" style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1; height: 40px; font-size: 0.9rem; box-sizing: border-box;">
+              </div>
+
+              <!-- Filtro Período Disponibilidade - Fim -->
+              <div class="form-group" style="margin: 0;">
+                <label style="font-weight: 600; display: block; margin-bottom: 6px; font-size: 0.8rem; color: #475569;">Disponível Até</label>
+                <input type="date" [(ngModel)]="investorFilters.dataFim" style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1; height: 40px; font-size: 0.9rem; box-sizing: border-box;">
+              </div>
+
+              <!-- Filtro Quantidade Mínima -->
+              <div class="form-group" style="margin: 0;">
+                <label style="font-weight: 600; display: block; margin-bottom: 6px; font-size: 0.8rem; color: #475569;">Qtd Mínima (Kg)</label>
+                <input type="number" [(ngModel)]="investorFilters.quantidadeMin" placeholder="Ex: 500" style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1; height: 40px; font-size: 0.9rem; box-sizing: border-box;">
+              </div>
+
+              <!-- Filtro Quantidade Máxima -->
+              <div class="form-group" style="margin: 0;">
+                <label style="font-weight: 600; display: block; margin-bottom: 6px; font-size: 0.8rem; color: #475569;">Qtd Máxima (Kg)</label>
+                <input type="number" [(ngModel)]="investorFilters.quantidadeMax" placeholder="Ex: 10000" style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1; height: 40px; font-size: 0.9rem; box-sizing: border-box;">
+              </div>
+            </div>
+          </div>
+
+          <!-- Representação Visual do Mapa de Calor (RF-45) -->
+          <div style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-radius: 16px; padding: 24px; color: #fff; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); margin-bottom: 24px; position: relative; overflow: hidden;">
+            <div style="position: absolute; top: -50px; right: -50px; width: 200px; height: 200px; background: rgba(59, 130, 246, 0.1); border-radius: 50%; filter: blur(40px);"></div>
+            <div style="position: absolute; bottom: -50px; left: -50px; width: 200px; height: 200px; background: rgba(16, 185, 129, 0.1); border-radius: 50%; filter: blur(40px);"></div>
+
+            <div style="position: relative; z-index: 2;">
+              <h4 style="margin: 0 0 8px 0; font-size: 1.1rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em;">Concentração de Ofertas Activas</h4>
+              <p style="margin: 0 0 24px 0; font-size: 0.9rem; color: #cbd5e1;">Volumes agregados por distrito (Moçambique). As tonalidades variam com base no volume total disponível.</p>
+
+              <!-- Simulador de Mapa de Calor de Moçambique com Regiões/Distritos Reativos -->
+              <div class="heatmap-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;">
+                @if (aggregatedOffers.length === 0) {
+                  <div style="grid-column: 1 / -1; padding: 40px; text-align: center; background: rgba(255,255,255,0.03); border-radius: 12px; border: 1px dashed rgba(255,255,255,0.1);">
+                    <mat-icon style="font-size: 48px; width: 48px; height: 48px; color: #64748b; margin-bottom: 12px;">map</mat-icon>
+                    <p style="margin: 0; color: #94a3b8; font-size: 0.95rem;">Nenhum volume registado para os filtros actuais no país.</p>
                   </div>
-                </div>
-              }
-            }
+                } @else {
+                  @for (data of aggregatedOffers; track data.distrito + data.produto) {
+                    <!-- Bloco de Calor de Distrito -->
+                    <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 16px; transition: transform 0.2s, background 0.2s; cursor: default; display: flex; flex-direction: column; justify-content: space-between;"
+                         onmouseover="this.style.background='rgba(255,255,255,0.1)'; this.style.transform='translateY(-2px)'"
+                         onmouseout="this.style.background='rgba(255,255,255,0.05)'; this.style.transform='translateY(0)'">
+                      
+                      <div>
+                        <!-- Cabeçalho do Distrito -->
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                          <div>
+                            <span style="font-size: 0.75rem; color: #94a3b8; font-weight: 600; text-transform: uppercase;">{{ data.provincia }}</span>
+                            <h5 style="margin: 2px 0 0 0; font-size: 1.1rem; font-weight: 700; color: #f8fafc;">{{ data.distrito }}</h5>
+                          </div>
+                          <!-- Indicador de Densidade / Volume por cor -->
+                          <div [style.background-color]="data.volumeTotalKg > 10000 ? '#ef4444' : (data.volumeTotalKg > 2000 ? '#f59e0b' : '#10b981')" 
+                               style="width: 12px; height: 12px; border-radius: 50%; box-shadow: 0 0 10px currentColor;"></div>
+                        </div>
+
+                        <!-- Detalhe do Produto e Volume -->
+                        <div style="margin-top: 12px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.05);">
+                          <div style="font-size: 0.85rem; color: #cbd5e1; display: flex; justify-content: space-between;">
+                            <span>Produto:</span>
+                            <strong style="color: #f8fafc;">{{ data.produto }}</strong>
+                          </div>
+                          <div style="font-size: 0.85rem; color: #cbd5e1; display: flex; justify-content: space-between; margin-top: 4px;">
+                            <span>Ofertas Activas:</span>
+                            <strong style="color: #f8fafc;">{{ data.quantidadeOfertas }}</strong>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Barra de Volume Representativa -->
+                      <div style="margin-top: 16px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #94a3b8; margin-bottom: 4px;">
+                          <span>Volume Total</span>
+                          <strong style="color: #60a5fa;">{{ data.volumeFormatado }}</strong>
+                        </div>
+                        <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden;">
+                          <!-- Barra com percentagem em relação ao máximo estimado (ex: 20 toneladas) -->
+                          <div [style.width.%]="Math.min(100, (data.volumeTotalKg / 20000) * 100)"
+                               [style.background]="data.volumeTotalKg > 10000 ? 'linear-gradient(90deg, #f59e0b, #ef4444)' : 'linear-gradient(90deg, #10b981, #3b82f6)'"
+                               style="height: 100%; border-radius: 3px;"></div>
+                        </div>
+                      </div>
+                    </div>
+                  }
+                }
+              </div>
+            </div>
+          </div>
+
+          <!-- Tabela de Dados Agregados (RF-45 / RF-49) -->
+          <div class="offers-table-card" style="background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+              <h4 style="margin: 0; font-size: 1.15rem; font-weight: 700; color: #0f172a;">Detalhe dos Dados Agregados por Distrito</h4>
+              <span style="font-size: 0.85rem; color: #64748b; font-style: italic;">ℹ️ Produtores e contactos ocultos para preservar a privacidade comercial (RF-49).</span>
+            </div>
+
+            <div style="overflow-x: auto;">
+              <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
+                <thead>
+                  <tr style="border-bottom: 2px solid #f1f5f9; color: #475569; font-weight: 600;">
+                    <th style="padding: 12px;">Produto</th>
+                    <th style="padding: 12px;">Província</th>
+                    <th style="padding: 12px;">Distrito</th>
+                    <th style="padding: 12px;">Número de Ofertas</th>
+                    <th style="padding: 12px; text-align: right;">Volume Agregado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @if (aggregatedOffers.length === 0) {
+                    <tr>
+                      <td colspan="5" style="padding: 30px; text-align: center; color: #94a3b8;">Nenhum dado agregado encontrado.</td>
+                    </tr>
+                  } @else {
+                    @for (row of aggregatedOffers; track row.distrito + row.produto) {
+                      <tr style="border-bottom: 1px solid #f1f5f9; color: #334155;">
+                        <td style="padding: 12px; font-weight: 600; color: #0f172a;">{{ row.produto }}</td>
+                        <td style="padding: 12px;">{{ row.provincia }}</td>
+                        <td style="padding: 12px;">{{ row.distrito }}</td>
+                        <td style="padding: 12px;">
+                          <span style="background: #f1f5f9; padding: 4px 8px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; color: #475569;">
+                            {{ row.quantidadeOfertas }} ofertas
+                          </span>
+                        </td>
+                        <td style="padding: 12px; text-align: right; font-weight: 700; color: #1e293b;">{{ row.volumeFormatado }}</td>
+                      </tr>
+                    }
+                  }
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       }
@@ -1253,4 +1341,100 @@
       </mat-tab-group>
     </div>
   }
+
+  <!-- ========================================================== -->
+  <!-- MODAL 5: INVESTIDOR - SOLICITAR RELATÓRIO E PAGAR VIA M-PESA -->
+  <!-- ========================================================== -->
+  <div class="modal-overlay" *ngIf="showReportRequestModal">
+    <div class="modal-card" style="max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto;">
+      <div class="modal-header">
+        <h3 style="display: flex; align-items: center; gap: 8px;">
+          <mat-icon style="color: #2b78e4;">description</mat-icon> Solicitar Relatório Personalizado
+        </h3>
+        <button class="close-btn" (click)="showReportRequestModal = false"><mat-icon>close</mat-icon></button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Passo 1: Preenchimento de Informações -->
+        @if (customReportRequest.passoPagamento === 1) {
+          <p class="modal-desc" style="margin-bottom: 20px; font-size: 0.9rem; color: #64748b; line-height: 1.5;">
+            Defina o tema e período do relatório personalizado que deseja receber. O nosso administrador irá processar os dados e enviar por e-mail no prazo máximo de 48 horas.
+          </p>
+
+          <div class="form-group" style="margin-bottom: 16px;">
+            <label style="font-weight: 600; display: block; margin-bottom: 6px; font-size: 0.85rem;">Tema / Título do Relatório *</label>
+            <input type="text" [(ngModel)]="customReportRequest.tema" placeholder="Ex: Evolução da oferta de gergelim na Zambézia nos últimos 6 meses" 
+                   style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; box-sizing: border-box; font-size: 0.9rem;">
+          </div>
+
+          <div class="form-group" style="margin-bottom: 16px;">
+            <label style="font-weight: 600; display: block; margin-bottom: 6px; font-size: 0.85rem;">Instruções e Detalhes Adicionais *</label>
+            <textarea [(ngModel)]="customReportRequest.detalhes" placeholder="Especifique os produtos, distritos ou métricas adicionais que gostaria de incluir na análise." 
+                      style="width: 100%; min-height: 100px; padding: 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-family: inherit; font-size: 0.9rem; box-sizing: border-box; resize: vertical;"></textarea>
+          </div>
+
+          <div style="background: #eff6ff; border-radius: 8px; padding: 12px; font-size: 0.85rem; color: #1e3a8a; border-left: 4px solid #3b82f6; display: flex; flex-direction: column; gap: 4px;">
+            <strong>Custo do Serviço: 500,00 MT</strong>
+            <span>O pagamento será processado via M-Pesa no próximo passo (simulação no MVP).</span>
+          </div>
+        }
+
+        <!-- Passo 2: Pagamento M-Pesa -->
+        @if (customReportRequest.passoPagamento === 2) {
+          <div style="text-align: center; margin-bottom: 20px;">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/d/d1/M-pesa_logo-01.png" alt="M-Pesa" style="height: 50px; object-fit: contain; margin-bottom: 8px; display: block; margin-left: auto; margin-right: auto;" onerror="this.src='https://placehold.co/120x50/e11d48/white?text=M-Pesa'">
+            <h4 style="margin: 0; font-size: 1.1rem; font-weight: 700; color: #e11d48;">Pagamento M-Pesa</h4>
+            <p style="margin: 4px 0 0 0; font-size: 0.85rem; color: #64748b;">Introduza os dados da sua conta para simular o pagamento.</p>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 16px;">
+            <label style="font-weight: 600; display: block; margin-bottom: 6px; font-size: 0.85rem;">Número de Telefone M-Pesa *</label>
+            <input type="text" [(ngModel)]="customReportRequest.telefoneMpesa" placeholder="Ex: 84XXXXXXX ou 85XXXXXXX" 
+                   style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; box-sizing: border-box; font-size: 0.9rem;">
+          </div>
+
+          <div class="form-group" style="margin-bottom: 16px;">
+            <label style="font-weight: 600; display: block; margin-bottom: 6px; font-size: 0.85rem;">PIN de Transação M-Pesa *</label>
+            <input type="password" [(ngModel)]="customReportRequest.pinMpesa" placeholder="••••" maxlength="4"
+                   style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; box-sizing: border-box; font-size: 0.9rem; text-align: center; letter-spacing: 0.5em;">
+          </div>
+
+          <div *ngIf="customReportRequest.processandoPagamento" style="display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 20px;">
+            <mat-progress-bar mode="indeterminate" color="accent" style="width: 80%;"></mat-progress-bar>
+            <span style="font-size: 0.85rem; color: #475569; font-weight: 500;">A comunicar com a API do M-Pesa... Por favor, aguarde.</span>
+          </div>
+        }
+
+        <!-- Passo 3: Confirmação e Sucesso -->
+        @if (customReportRequest.passoPagamento === 3) {
+          <div style="text-align: center; padding: 20px 10px;">
+            <mat-icon style="font-size: 64px; width: 64px; height: 64px; color: #10b981; margin: 0 auto 16px auto; display: block;">check_circle</mat-icon>
+            <h4 style="margin: 0 0 8px 0; font-size: 1.3rem; font-weight: 800; color: #0f172a;">Pagamento Confirmado!</h4>
+            <p style="margin: 0 0 20px 0; font-size: 0.9rem; color: #64748b; line-height: 1.5;">
+              O pagamento de 500,00 MT foi concluído com sucesso. Um e-mail simulado foi enviado para o administrador com a solicitação do seu relatório: 
+              <br><strong style="color: #0f172a;">"{{ customReportRequest.tema }}"</strong>.
+            </p>
+            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px; font-size: 0.85rem; color: #166534; display: inline-flex; align-items: center; gap: 6px;">
+              <mat-icon style="font-size: 16px; width: 16px; height: 16px;">mail</mat-icon>
+              O administrador responderá manualmente com a análise anexada em breve.
+            </div>
+          </div>
+        }
+      </div>
+
+      <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 12px; border-top: 1px solid #e2e8f0; padding-top: 16px; margin-top: 20px;">
+        @if (customReportRequest.passoPagamento === 1) {
+          <button mat-button class="btn-cancel" (click)="showReportRequestModal = false" style="padding: 8px 16px;">Cancelar</button>
+          <button mat-flat-button color="primary" (click)="avancarParaPagamento()" style="padding: 8px 16px; background-color: #2b78e4;">Avançar para Pagamento</button>
+        }
+        @if (customReportRequest.passoPagamento === 2) {
+          <button mat-button class="btn-cancel" [disabled]="customReportRequest.processandoPagamento" (click)="customReportRequest.passoPagamento = 1" style="padding: 8px 16px;">Voltar</button>
+          <button mat-flat-button color="accent" [disabled]="customReportRequest.processandoPagamento" (click)="confirmarPagamentoMpesa()" style="padding: 8px 16px;">Simular Pagamento (500 MT)</button>
+        }
+        @if (customReportRequest.passoPagamento === 3) {
+          <button mat-flat-button color="primary" (click)="showReportRequestModal = false" style="padding: 8px 20px;">Concluído</button>
+        }
+      </div>
+    </div>
+  </div>
 </div>
