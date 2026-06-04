@@ -88,15 +88,29 @@
   }
 }
 
-.toolbar-link {
-  color: #546E7A;
-  font-weight: 500;
-  margin-right: 8px;
-}
-
+.toolbar-link,
 .toolbar-register-btn {
   border-radius: 10px !important;
   font-weight: 600;
+  color: #475569 !important; // Slate-600 para estado inativo
+  transition: all 0.25s ease;
+  margin-right: 8px;
+
+  &:hover {
+    background-color: rgba(46, 125, 50, 0.06);
+    color: #1b5e20 !important;
+  }
+}
+
+.active-auth-btn {
+  background-color: #2e7d32 !important; // Verde primário
+  color: white !important;
+  box-shadow: 0 4px 10px rgba(46, 125, 50, 0.15);
+
+  &:hover {
+    background-color: #1b5e20 !important;
+    color: white !important;
+  }
 }
 
 // Responsivo

@@ -46,12 +46,12 @@ body {
   letter-spacing: 0.2px;
 }
 
-// Form fields com bordas suaves
+// Form fields com bordas suaves e cores refinadas (Tokens MDC)
 .mat-mdc-form-field {
-  .mdc-notched-outline__leading,
-  .mdc-notched-outline__trailing {
-    border-radius: 12px !important;
-  }
+  --mdc-outlined-text-field-container-shape: 12px;
+  --mdc-outlined-text-field-outline-color: #cbd5e1;
+  --mdc-outlined-text-field-focus-outline-color: #2e7d32;
+  --mdc-outlined-text-field-hover-outline-color: #1b5e20;
 }
 
 // Snackbar de sucesso

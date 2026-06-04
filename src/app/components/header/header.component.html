@@ -33,10 +33,10 @@
         </button>
       </mat-menu>
     } @else {
-      <a mat-button routerLink="/login" class="toolbar-link" id="nav-login">
+      <a mat-button routerLink="/login" routerLinkActive="active-auth-btn" class="toolbar-link" id="nav-login">
         Entrar
       </a>
-      <a mat-raised-button routerLink="/register" color="primary" class="toolbar-register-btn" id="nav-register">
+      <a mat-button routerLink="/register" routerLinkActive="active-auth-btn" class="toolbar-register-btn" id="nav-register">
         Criar conta
       </a>
     }

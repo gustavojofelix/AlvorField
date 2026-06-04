@@ -61,35 +61,41 @@
         <p>Insira os seus dados de acesso ou escolha um utilizador demonstrativo abaixo.</p>
       </div>
 
-      <!-- Utilizadores de Teste (Clicar para Entrar) -->
+      <!-- Utilizadores de Teste (Painel Expansível) -->
       <div class="demo-users-section">
-        <h3 class="section-title">
-          <mat-icon>science</mat-icon>
-          Contas Demonstrativas (Clique para testar)
-        </h3>
-        
-        <div class="demo-users-grid">
-          @for (user of sampleUsers; track user.id) {
-            <div class="demo-user-card" (click)="quickLogin(user)" [attr.id]="'demo-user-' + user.tipo.toLowerCase()">
-              <div class="demo-user-header">
-                <div class="avatar-circle" [ngClass]="user.tipo.toLowerCase()">
-                  <mat-icon>{{ user.avatar }}</mat-icon>
+        <mat-accordion class="demo-users-accordion">
+          <mat-expansion-panel [expanded]="false" class="demo-users-panel">
+            <mat-expansion-panel-header>
+              <mat-panel-title class="section-title">
+                <mat-icon>science</mat-icon>
+                <span>Demonstração / Acesso Rápido</span>
+              </mat-panel-title>
+            </mat-expansion-panel-header>
+            
+            <div class="demo-users-grid">
+              @for (user of sampleUsers; track user.id) {
+                <div class="demo-user-card" (click)="quickLogin(user)" [attr.id]="'demo-user-' + user.tipo.toLowerCase()">
+                  <div class="demo-user-header">
+                    <div class="avatar-circle" [ngClass]="user.tipo.toLowerCase()">
+                      <mat-icon>{{ user.avatar }}</mat-icon>
+                    </div>
+                    <div class="user-meta">
+                      <span class="user-name">{{ user.nome }}</span>
+                      <span class="user-role-badge" [ngClass]="user.tipo.toLowerCase()">
+                        {{ user.tipo }}
+                      </span>
+                    </div>
+                  </div>
+                  <p class="user-desc">{{ user.descricao }}</p>
+                  <div class="user-loc">
+                    <mat-icon>place</mat-icon>
+                    <span>{{ user.localidade }}</span>
+                  </div>
                 </div>
-                <div class="user-meta">
-                  <span class="user-name">{{ user.nome }}</span>
-                  <span class="user-role-badge" [ngClass]="user.tipo.toLowerCase()">
-                    {{ user.tipo }}
-                  </span>
-                </div>
-              </div>
-              <p class="user-desc">{{ user.descricao }}</p>
-              <div class="user-loc">
-                <mat-icon>place</mat-icon>
-                <span>{{ user.localidade }}</span>
-              </div>
+              }
             </div>
-          }
-        </div>
+          </mat-expansion-panel>
+        </mat-accordion>
       </div>
 
       <!-- Formulário de Login -->
@@ -98,7 +104,15 @@
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>Número de telefone</mat-label>
             <mat-icon matPrefix>phone</mat-icon>
-            <input matInput formControlName="telefone" placeholder="841234567" maxlength="9" />
+            <input 
+              matInput 
+              formControlName="telefone" 
+              placeholder="841234567" 
+              maxlength="9"
+              type="tel"
+              inputmode="numeric"
+              autocomplete="tel"
+            />
             <mat-error *ngIf="loginForm.get('telefone')?.hasError('required') && loginForm.get('telefone')?.touched">
               O número de telefone é obrigatório.
             </mat-error>
@@ -110,8 +124,14 @@
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>Password</mat-label>
             <mat-icon matPrefix>lock</mat-icon>
-            <input matInput [type]="hidePassword ? 'password' : 'text'" formControlName="password" placeholder="Insira a password" />
-            <button mat-icon-button matSuffix type="button" (click)="hidePassword = !hidePassword">
+            <input 
+              matInput 
+              [type]="hidePassword ? 'password' : 'text'" 
+              formControlName="password" 
+              placeholder="Insira a password" 
+              autocomplete="current-password"
+            />
+            <button mat-icon-button matSuffix type="button" (click)="hidePassword = !hidePassword" aria-label="Alternar visibilidade da password">
               <mat-icon>{{ hidePassword ? 'visibility_off' : 'visibility' }}</mat-icon>
             </button>
             <mat-error *ngIf="loginForm.get('password')?.invalid && loginForm.get('password')?.touched">
@@ -121,11 +141,15 @@
 
           <button mat-raised-button color="primary" type="submit" class="submit-btn full-width" [disabled]="loginForm.invalid || isLoading">
             @if (isLoading) {
-              <mat-icon class="spin-animation">sync</mat-icon>
-              A entrar...
+              <ng-container>
+                <mat-icon class="spin-animation">sync</mat-icon>
+                <span>A entrar...</span>
+              </ng-container>
             } @else {
-              <mat-icon>login</mat-icon>
-              Iniciar Sessão
+              <ng-container>
+                <mat-icon>login</mat-icon>
+                <span>Iniciar Sessão</span>
+              </ng-container>
             }
           </button>
         </form>

@@ -163,11 +163,15 @@
 
           <button mat-raised-button color="primary" type="submit" class="submit-btn full-width" [disabled]="registerForm.invalid || isLoading">
             @if (isLoading) {
-              <mat-icon class="spin-animation">sync</mat-icon>
-              A criar conta...
+              <ng-container>
+                <mat-icon class="spin-animation">sync</mat-icon>
+                <span>A criar conta...</span>
+              </ng-container>
             } @else {
-              <mat-icon>person_add</mat-icon>
-              Criar Conta Grátis
+              <ng-container>
+                <mat-icon>person_add</mat-icon>
+                <span>Criar Conta Grátis</span>
+              </ng-container>
             }
           </button>
         </form>
