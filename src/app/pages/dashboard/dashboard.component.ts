@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -142,10 +142,14 @@ export class DashboardComponent implements OnInit {
   };
   editingOfferId: string | number | null = null;
 
-  // Dropdown e localizações
-  productsList: string[] = [];
+  productsList: string[] = [
+    'Milho Branco', 'Feijão Nhemba', 'Feijão Manteiga', 'Gergelim',
+    'Castanha de Caju', 'Manga', 'Mandioca', 'Amendoim',
+    'Batata Doce', 'Tomate', 'Cebola Vermelha'
+  ];
   provincesList: Province[] = [];
   districtsList: string[] = [];
+  savingOffer = false;
 
   // Geolocalização
   loadingLocation = false;
@@ -268,7 +272,8 @@ export class DashboardComponent implements OnInit {
     public evaluationService: EvaluationService,
     private adminService: AdminService,
     private router: Router,
-    private snack: MatSnackBar
+    private snack: MatSnackBar,
+    private cdr: ChangeDetectorRef
   ) {}
 
   get produtorSales(): number {
@@ -311,13 +316,45 @@ export class DashboardComponent implements OnInit {
     this.user = this.authService.getCurrentUser();
     this.setGreeting();
     this.setDashboardCards();
-    this.productsList = await this.offerService.getPredefinedProducts();
     this.provincesList = this.locationService.getProvinces();
+    
+    try {
+      this.productsList = await this.offerService.getPredefinedProducts();
+    } catch (e) {
+      console.error('Erro ao carregar produtos predefinidos:', e);
+      this.productsList = [
+        'Milho Branco', 'Feijão Nhemba', 'Feijão Manteiga', 'Gergelim',
+        'Castanha de Caju', 'Manga', 'Mandioca', 'Amendoim',
+        'Batata Doce', 'Tomate', 'Cebola Vermelha'
+      ];
+    }
+
     this.loadMockData();
-    await this.loadOffers();
-    await this.loadInterests();
-    await this.loadAdminData();
-    await this.loadUserReputation();
+
+    try {
+      await this.loadOffers();
+    } catch (e) {
+      console.error('Erro ao carregar ofertas:', e);
+    }
+
+    try {
+      await this.loadInterests();
+    } catch (e) {
+      console.error('Erro ao carregar interesses:', e);
+    }
+
+    try {
+      await this.loadAdminData();
+    } catch (e) {
+      console.error('Erro ao carregar dados admin:', e);
+    }
+
+    try {
+      await this.loadUserReputation();
+    } catch (e) {
+      console.error('Erro ao carregar reputação:', e);
+    }
+    this.cdr.detectChanges();
   }
 
   async loadUserReputation(): Promise<void> {
@@ -592,7 +629,7 @@ export class DashboardComponent implements OnInit {
   // ==========================================
   // 1. AÇÕES DO PRODUTOR
   // ==========================================
-  publishOffer(isDraft = false): void {
+  async publishOffer(isDraft = false): Promise<void> {
     if (
       !this.newOffer.produto ||
       this.newOffer.quantidade === null ||
@@ -632,14 +669,18 @@ export class DashboardComponent implements OnInit {
     };
 
     try {
+      this.savingOffer = true;
+      console.log('Iniciando comunicação com Supabase...', offerData);
       if (this.editingOfferId) {
-        this.offerService.updateOffer(this.editingOfferId, offerData);
+        await this.offerService.updateOffer(this.editingOfferId, offerData);
+        console.log('Oferta actualizada com sucesso no Supabase.');
         this.snack.open('Oferta de colheita actualizada com sucesso!', 'Excelente', {
           duration: 3000,
           panelClass: ['snackbar-success']
         });
       } else {
-        this.offerService.createOffer(offerData);
+        const result = await this.offerService.createOffer(offerData);
+        console.log('Nova oferta criada com sucesso no Supabase:', result);
         this.snack.open(
           isDraft ? 'Oferta guardada como Rascunho com sucesso!' : 'Oferta de colheita publicada com sucesso!',
           'Excelente',
@@ -649,15 +690,19 @@ export class DashboardComponent implements OnInit {
           }
         );
       }
+      
+      // Fechar modal e recarregar
+      this.showOfferModal = false;
+      this.editingOfferId = null;
+      await this.loadOffers();
+      this.cdr.detectChanges();
     } catch (e: any) {
+      console.error('Falha na comunicação com o Supabase:', e);
       this.snack.open(e.message || 'Erro ao guardar oferta.', 'Erro', { duration: 3000 });
-      return;
+    } finally {
+      this.savingOffer = false;
+      this.cdr.detectChanges();
     }
-
-    // Fechar modal e recarregar
-    this.showOfferModal = false;
-    this.editingOfferId = null;
-    this.loadOffers();
   }
 
   async togglePauseOffer(id: string | number): Promise<void> {

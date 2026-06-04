@@ -77,7 +77,7 @@ export class AuthService {
     this.supabaseService.client.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
         await this.fetchAndCacheProfile(session.user.id);
-      } else {
+      } else if (event === 'SIGNED_OUT') {
         localStorage.removeItem(this.LOGGED_USER_KEY);
       }
     });
@@ -401,9 +401,33 @@ export class AuthService {
   }
 
   async logout(): Promise<void> {
-    await this.supabaseService.client.auth.signOut();
-    localStorage.removeItem(this.LOGGED_USER_KEY);
-    this.router.navigate(['/login']);
+    try {
+      await this.supabaseService.client.auth.signOut();
+    } catch (e) {
+      console.error('Error during Supabase signOut:', e);
+    } finally {
+      localStorage.removeItem(this.LOGGED_USER_KEY);
+      this.router.navigate(['/login']);
+    }
+  }
+
+  async checkSessionValid(): Promise<boolean> {
+    try {
+      const { data: { session }, error } = await this.supabaseService.client.auth.getSession();
+      if (error || !session) {
+        localStorage.removeItem(this.LOGGED_USER_KEY);
+        return false;
+      }
+      const currentUser = this.getCurrentUser();
+      if (!currentUser) {
+        const userProfile = await this.fetchAndCacheProfile(session.user.id);
+        return userProfile !== null;
+      }
+      return true;
+    } catch (e) {
+      localStorage.removeItem(this.LOGGED_USER_KEY);
+      return false;
+    }
   }
 
   isLoggedIn(): boolean {

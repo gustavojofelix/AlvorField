@@ -40,14 +40,22 @@ export class OfferService {
       .from('predefined_products')
       .select('name');
 
-    if (error || !data) {
+    if (error || !data || data.length === 0) {
       return [
         'Milho Branco', 'Feijão Nhemba', 'Feijão Manteiga', 'Gergelim',
         'Castanha de Caju', 'Manga', 'Mandioca', 'Amendoim',
         'Batata Doce', 'Tomate', 'Cebola Vermelha'
       ];
     }
-    return data.map(p => p.name);
+    const mapped = data.map((p: any) => p.name || p.produto || (typeof p === 'string' ? p : Object.values(p)[0]) || '').filter(Boolean);
+    if (mapped.length === 0) {
+      return [
+        'Milho Branco', 'Feijão Nhemba', 'Feijão Manteiga', 'Gergelim',
+        'Castanha de Caju', 'Manga', 'Mandioca', 'Amendoim',
+        'Batata Doce', 'Tomate', 'Cebola Vermelha'
+      ];
+    }
+    return mapped;
   }
 
   // Mapeamentos de Estado:

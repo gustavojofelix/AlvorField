@@ -13,6 +13,14 @@ export const authGuard = () => {
   
   if (authService.isLoggedIn()) {
     authService.registarAcesso(); // RF-11: Registrar último acesso ao acessar rotas protegidas
+    
+    // Validar a sessão com o Supabase em segundo plano
+    authService.checkSessionValid().then(isValid => {
+      if (!isValid) {
+        router.navigate(['/login']);
+      }
+    });
+    
     return true;
   }
   

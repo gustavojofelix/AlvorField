@@ -72,7 +72,11 @@ export class MarketComponent implements OnInit {
   // Data sources
   provincesList: Province[] = [];
   districtsList: string[] = [];
-  productsList: string[] = [];
+  productsList: string[] = [
+    'Milho Branco', 'Feijão Nhemba', 'Feijão Manteiga', 'Gergelim',
+    'Castanha de Caju', 'Manga', 'Mandioca', 'Amendoim',
+    'Batata Doce', 'Tomate', 'Cebola Vermelha'
+  ];
   availableOffers: Offer[] = [];
   favorites: Array<string | number> = [];
   activeAlerts: CustomAlert[] = [];
