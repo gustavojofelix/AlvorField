@@ -581,3 +581,128 @@
     }
   }
 }
+
+// Estilos de recuperação de password e opções adicionais
+.login-options-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 0.88rem;
+
+  mat-checkbox {
+    ::ng-deep .mdc-label {
+      font-size: 0.85rem;
+      color: #64748b;
+      font-weight: 500;
+    }
+  }
+
+  .forgot-password-link {
+    color: #1565c0;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+
+    &:hover {
+      text-decoration: underline;
+      color: #0d47a1;
+    }
+  }
+}
+
+.recovery-step {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.otp-verification-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid #e2e8f0;
+  margin-bottom: 8px;
+
+  .otp-info {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+
+    .otp-icon {
+      color: #1565c0;
+      background: rgba(21, 101, 192, 0.1);
+      padding: 6px;
+      border-radius: 8px;
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+    }
+
+    .otp-text {
+      font-size: 0.85rem;
+      color: #475569;
+      line-height: 1.4;
+
+      p {
+        margin: 0;
+      }
+
+      .timer-warning {
+        margin-top: 4px;
+        color: #d32f2f;
+      }
+    }
+  }
+
+  .otp-error-msg {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #d32f2f;
+    font-size: 0.82rem;
+    font-weight: 600;
+    background: #fef2f2;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid #fee2e2;
+
+    mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+    }
+  }
+}
+
+.step-actions-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+
+  button {
+    height: 46px;
+    border-radius: 12px !important;
+    font-weight: 600;
+  }
+
+  .back-btn {
+    color: #64748b;
+    border: 1px solid #cbd5e1 !important;
+    flex: 1;
+
+    &:hover {
+      background: #f1f5f9;
+    }
+  }
+
+  .next-btn, .action-btn {
+    flex: 1.5;
+  }
+}
+

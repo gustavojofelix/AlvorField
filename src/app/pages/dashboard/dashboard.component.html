@@ -10,14 +10,26 @@
         <span class="greeting-prefix">{{ greeting }},</span>
         <h1 class="user-fullname">{{ user?.nome }}</h1>
         <div class="user-badges">
-          <mat-chip class="role-chip" [ngClass]="user?.tipo?.toLowerCase() || ''">
+          <mat-chip class="role-chip" [ngClass]="user?.tipo?.toLowerCase()?.replace(' ', '-') || ''">
             <mat-icon class="chip-icon">{{ getUserTypeIcon() }}</mat-icon>
             {{ user?.tipo }}
           </mat-chip>
           <span class="location-badge">
             <mat-icon>place</mat-icon>
-            {{ user?.localidade || 'Não especificado' }}
+            {{ user?.provincia }}, {{ user?.distrito }}
           </span>
+        </div>
+      </div>
+      
+      <!-- RF-11: Exibição dos timestamps de auditoria -->
+      <div class="user-meta-times">
+        <div class="time-item">
+          <mat-icon>login</mat-icon>
+          <span>Último login: <strong>{{ user?.ultimoLogin | date:'dd/MM/yyyy HH:mm' }}</strong></span>
+        </div>
+        <div class="time-item">
+          <mat-icon>history</mat-icon>
+          <span>Último acesso: <strong>{{ user?.ultimoAcesso | date:'dd/MM/yyyy HH:mm' }}</strong></span>
         </div>
       </div>
     </div>

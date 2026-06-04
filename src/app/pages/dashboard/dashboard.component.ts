@@ -50,7 +50,7 @@ export class DashboardComponent implements OnInit {
     {
       produtor: 'Mateus Tembe',
       consumidor: 'Lúcia Maputo',
-      distrito: 'Macia → Maputo',
+      distrito: 'Bilene → Maputo',
       produto: 'Tomate Calibre A',
       quantidade: '2.5 Toneladas',
       status: 'Concluído',
@@ -127,74 +127,75 @@ export class DashboardComponent implements OnInit {
       }
     ];
 
-    switch (this.user?.tipo) {
-      case 'Produtor':
-        this.dashboardCards = [
-          {
-            icon: 'add_photo_alternate',
-            title: 'Publicar Nova Oferta',
-            description: 'Registe o seu stock disponível, fotos da machamba, preços e previsão de colheita.',
-            color: '#2E7D32',
-            action: 'Publicar Oferta'
-          },
-          {
-            icon: 'handshake',
-            title: 'Propostas de Compradores',
-            description: 'Veja propostas recebidas de supermercados e restaurantes interessados.',
-            color: '#E65100',
-            action: 'Ver Propostas (2)'
-          },
-          ...commonCards
-        ];
-        break;
-      case 'Consumidor':
-        this.dashboardCards = [
-          {
-            icon: 'search',
-            title: 'Pesquisar Produtores',
-            description: 'Encontre machambas próximas filtrando por província, produto e tipo de cultivo.',
-            color: '#E65100',
-            action: 'Pesquisar'
-          },
-          {
-            icon: 'shopping_cart',
-            title: 'Pedidos de Cotação',
-            description: 'Publique o que a sua empresa necessita para que produtores lhe façam ofertas directas.',
-            color: '#2E7D32',
-            action: 'Criar Pedido'
-          },
-          ...commonCards
-        ];
-        break;
-      case 'Investidor':
-        this.dashboardCards = [
-          {
-            icon: 'trending_up',
-            title: 'Projectos Agrícolas',
-            description: 'Analise fichas técnicas de machambas à procura de capital para estufas e furos de água.',
-            color: '#1565C0',
-            action: 'Analisar Projectos'
-          },
-          {
-            icon: 'shield',
-            title: 'Garantias & Contratos',
-            description: 'Acompanhe os contratos inteligentes celebrados com produtores financiados.',
-            color: '#7B1FA2',
-            action: 'Ver Contratos'
-          },
-          ...commonCards
-        ];
-        break;
+    const userTipo = this.user?.tipo;
+
+    if (userTipo === 'Produtor Individual' || userTipo === 'Cooperativa') {
+      this.dashboardCards = [
+        {
+          icon: 'add_photo_alternate',
+          title: 'Publicar Nova Oferta',
+          description: 'Registe o seu stock disponível, fotos da machamba, preços e previsão de colheita.',
+          color: '#2E7D32',
+          action: 'Publicar Oferta'
+        },
+        {
+          icon: 'handshake',
+          title: 'Propostas de Compradores',
+          description: 'Veja propostas recebidas de supermercados e restaurantes interessados.',
+          color: '#E65100',
+          action: 'Ver Propostas (2)'
+        },
+        ...commonCards
+      ];
+    } else if (userTipo === 'Comprador') {
+      this.dashboardCards = [
+        {
+          icon: 'search',
+          title: 'Pesquisar Produtores',
+          description: 'Encontre machambas e cooperativas próximas filtrando por província, produto e cultivo.',
+          color: '#E65100',
+          action: 'Pesquisar'
+        },
+        {
+          icon: 'shopping_cart',
+          title: 'Pedidos de Cotação',
+          description: 'Publique o que a sua empresa necessita para que produtores lhe façam ofertas directas.',
+          color: '#2E7D32',
+          action: 'Criar Pedido'
+        },
+        ...commonCards
+      ];
+    } else if (userTipo === 'Investidor') {
+      this.dashboardCards = [
+        {
+          icon: 'trending_up',
+          title: 'Projectos Agrícolas',
+          description: 'Analise fichas técnicas de machambas à procura de capital para estufas e furos de água.',
+          color: '#1565C0',
+          action: 'Analisar Projectos'
+        },
+        {
+          icon: 'shield',
+          title: 'Garantias & Contratos',
+          description: 'Acompanhe os contratos inteligentes celebrados com produtores financiados.',
+          color: '#7B1FA2',
+          action: 'Ver Contratos'
+        },
+        ...commonCards
+      ];
     }
   }
 
   getUserTypeIcon(): string {
-    switch (this.user?.tipo) {
-      case 'Produtor': return 'agriculture';
-      case 'Consumidor': return 'shopping_basket';
-      case 'Investidor': return 'trending_up';
-      default: return 'person';
+    const tipo = this.user?.tipo;
+    if (tipo === 'Produtor Individual' || tipo === 'Cooperativa') {
+      return 'agriculture';
+    } else if (tipo === 'Comprador') {
+      return 'shopping_basket';
+    } else if (tipo === 'Investidor') {
+      return 'trending_up';
     }
+    return 'person';
   }
 
   triggerAction(actionName: string): void {

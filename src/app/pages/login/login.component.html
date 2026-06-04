@@ -43,7 +43,7 @@
     </div>
   </div>
 
-  <!-- Secção direita: Formulário e Utilizadores Rápidos -->
+  <!-- Secção direita: Formulário e Utilizadores Rápidos / Recuperação de Senha -->
   <div class="auth-form-section">
     <div class="form-container">
       
@@ -56,109 +56,233 @@
         <p>Conectando o campo ao mercado</p>
       </div>
 
-      <div class="form-card-header">
-        <h2>Entrar na Plataforma</h2>
-        <p>Insira os seus dados de acesso ou escolha um utilizador demonstrativo abaixo.</p>
-      </div>
+      @if (!recoveringPassword) {
+        <div class="form-card-header">
+          <h2>Entrar na Plataforma</h2>
+          <p>Insira os seus dados de acesso ou escolha um utilizador demonstrativo abaixo.</p>
+        </div>
 
-      <!-- Utilizadores de Teste (Painel Expansível) -->
-      <div class="demo-users-section">
-        <mat-accordion class="demo-users-accordion">
-          <mat-expansion-panel [expanded]="false" class="demo-users-panel">
-            <mat-expansion-panel-header>
-              <mat-panel-title class="section-title">
-                <mat-icon>science</mat-icon>
-                <span>Demonstração / Acesso Rápido</span>
-              </mat-panel-title>
-            </mat-expansion-panel-header>
-            
-            <div class="demo-users-grid">
-              @for (user of sampleUsers; track user.id) {
-                <div class="demo-user-card" (click)="quickLogin(user)" [attr.id]="'demo-user-' + user.tipo.toLowerCase()">
-                  <div class="demo-user-header">
-                    <div class="avatar-circle" [ngClass]="user.tipo.toLowerCase()">
-                      <mat-icon>{{ user.avatar }}</mat-icon>
+        <!-- Utilizadores de Teste (Painel Expansível) -->
+        <div class="demo-users-section">
+          <mat-accordion class="demo-users-accordion">
+            <mat-expansion-panel [expanded]="false" class="demo-users-panel">
+              <mat-expansion-panel-header>
+                <mat-panel-title class="section-title">
+                  <mat-icon>science</mat-icon>
+                  <span>Demonstração / Acesso Rápido</span>
+                </mat-panel-title>
+              </mat-expansion-panel-header>
+              
+              <div class="demo-users-grid">
+                @for (user of sampleUsers; track user.id) {
+                  <div class="demo-user-card" (click)="quickLogin(user)" [attr.id]="'demo-user-' + user.id">
+                    <div class="demo-user-header">
+                      <div class="avatar-circle">
+                        <mat-icon>{{ user.avatar }}</mat-icon>
+                      </div>
+                      <div class="user-meta">
+                        <span class="user-name">{{ user.nome }}</span>
+                        <span class="user-role-badge">
+                          {{ user.tipo }}
+                        </span>
+                      </div>
                     </div>
-                    <div class="user-meta">
-                      <span class="user-name">{{ user.nome }}</span>
-                      <span class="user-role-badge" [ngClass]="user.tipo.toLowerCase()">
-                        {{ user.tipo }}
-                      </span>
+                    <p class="user-desc">{{ user.descricao }}</p>
+                    <div class="user-loc">
+                      <mat-icon>place</mat-icon>
+                      <span>{{ user.provincia }}, {{ user.distrito }}</span>
                     </div>
                   </div>
-                  <p class="user-desc">{{ user.descricao }}</p>
-                  <div class="user-loc">
-                    <mat-icon>place</mat-icon>
-                    <span>{{ user.localidade }}</span>
+                }
+              </div>
+            </mat-expansion-panel>
+          </mat-accordion>
+        </div>
+
+        <!-- Formulário de Login -->
+        <mat-card class="login-mat-card">
+          <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Número de telefone</mat-label>
+              <mat-icon matPrefix>phone</mat-icon>
+              <input 
+                matInput 
+                formControlName="telefone" 
+                placeholder="841234567" 
+                maxlength="9"
+                type="tel"
+                inputmode="numeric"
+                autocomplete="tel"
+              />
+              <mat-error *ngIf="loginForm.get('telefone')?.hasError('required') && loginForm.get('telefone')?.touched">
+                O número de telefone é obrigatório.
+              </mat-error>
+              <mat-error *ngIf="loginForm.get('telefone')?.hasError('pattern') && loginForm.get('telefone')?.touched">
+                Insira um número válido em Moçambique com 9 dígitos.
+              </mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Password</mat-label>
+              <mat-icon matPrefix>lock</mat-icon>
+              <input 
+                matInput 
+                [type]="hidePassword ? 'password' : 'text'" 
+                formControlName="password" 
+                placeholder="Insira a password" 
+                autocomplete="current-password"
+              />
+              <button mat-icon-button matSuffix type="button" (click)="hidePassword = !hidePassword" aria-label="Alternar visibilidade da password">
+                <mat-icon>{{ hidePassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+              </button>
+              <mat-error *ngIf="loginForm.get('password')?.invalid && loginForm.get('password')?.touched">
+                A password é obrigatória (mínimo 6 caracteres).
+              </mat-error>
+            </mat-form-field>
+
+            <div class="login-options-row">
+              <mat-checkbox formControlName="lembarMe" color="primary">Lembrar-me</mat-checkbox>
+              <a type="button" class="forgot-password-link" (click)="iniciarRecuperacao()">Esqueci a password</a>
+            </div>
+
+            <button mat-raised-button color="primary" type="submit" class="submit-btn full-width" [disabled]="loginForm.invalid || isLoading">
+              @if (isLoading) {
+                <ng-container>
+                  <mat-icon class="spin-animation">sync</mat-icon>
+                  <span>A entrar...</span>
+                </ng-container>
+              } @else {
+                <ng-container>
+                  <mat-icon>login</mat-icon>
+                  <span>Iniciar Sessão</span>
+                </ng-container>
+              }
+            </button>
+          </form>
+
+          <div class="form-footer">
+            <p>Ainda não tem conta no AlvorField?</p>
+            <a routerLink="/register" class="register-link">Criar conta como Produtor, Comprador ou Investidor</a>
+          </div>
+        </mat-card>
+      } @else {
+        <!-- ================= FLUXO DE RECUPERAÇÃO DE SENHA (RF-10) ================= -->
+        <div class="form-card-header">
+          <h2>Recuperar Password</h2>
+          <p>Siga os passos para redefinir a password da sua conta via SMS OTP.</p>
+        </div>
+
+        <mat-card class="login-mat-card">
+          <form [formGroup]="recoveryForm" class="login-form">
+            
+            <!-- PASSO 1 DA RECUPERAÇÃO: INFORMAR TELEFONE -->
+            @if (recoveryStep === 1) {
+              <div class="recovery-step">
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Número de telemóvel registado</mat-label>
+                  <mat-icon matPrefix>phone</mat-icon>
+                  <input matInput formControlName="telefone" placeholder="841234567" maxlength="9" />
+                  <mat-error *ngIf="recoveryForm.get('telefone')?.hasError('required') && recoveryForm.get('telefone')?.touched">
+                    O número de telefone é obrigatório.
+                  </mat-error>
+                  <mat-error *ngIf="recoveryForm.get('telefone')?.hasError('pattern') && recoveryForm.get('telefone')?.touched">
+                    Insira um número válido de 9 dígitos.
+                  </mat-error>
+                </mat-form-field>
+
+                <div class="step-actions-row">
+                  <button mat-button type="button" class="back-btn" (click)="cancelarRecuperacao()">
+                    Voltar ao Login
+                  </button>
+                  <button mat-raised-button color="primary" type="button" class="action-btn next-btn" [disabled]="isLoading" (click)="solicitarRecoveryOTP()">
+                    @if (isLoading) {
+                      <ng-container>
+                        <mat-icon class="spin-animation">sync</mat-icon>
+                        <span>A enviar...</span>
+                      </ng-container>
+                    } @else {
+                      <ng-container>
+                        <mat-icon>textsms</mat-icon>
+                        <span>Enviar OTP</span>
+                      </ng-container>
+                    }
+                  </button>
+                </div>
+              </div>
+            }
+
+            <!-- PASSO 2 DA RECUPERAÇÃO: DIGITAR OTP E DEFINIR NOVA PASSWORD -->
+            @if (recoveryStep === 2) {
+              <div class="recovery-step">
+                <div class="otp-verification-panel">
+                  <div class="otp-info">
+                    <mat-icon class="otp-icon">sms</mat-icon>
+                    <div class="otp-text">
+                      <p>SMS simulado enviado para <strong>{{ recoveryForm.get('telefone')?.value }}</strong></p>
+                      <p class="timer-warning">O código expira em: <strong>{{ formatRecoveryCountdown() }}</strong></p>
+                    </div>
+                  </div>
+
+                  <mat-form-field appearance="outline" class="full-width">
+                    <mat-label>Código OTP de 6 dígitos</mat-label>
+                    <mat-icon matPrefix>security</mat-icon>
+                    <input matInput formControlName="otpCode" placeholder="Insira o código" maxlength="6" />
+                    <mat-error *ngIf="recoveryForm.get('otpCode')?.invalid && recoveryForm.get('otpCode')?.touched">
+                      O código OTP é obrigatório (6 dígitos).
+                    </mat-error>
+                  </mat-form-field>
+
+                  <div class="otp-error-msg" *ngIf="recoveryOtpError">
+                    <mat-icon>error_outline</mat-icon>
+                    <span>{{ recoveryOtpError }}</span>
                   </div>
                 </div>
-              }
-            </div>
-          </mat-expansion-panel>
-        </mat-accordion>
-      </div>
 
-      <!-- Formulário de Login -->
-      <mat-card class="login-mat-card">
-        <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Número de telefone</mat-label>
-            <mat-icon matPrefix>phone</mat-icon>
-            <input 
-              matInput 
-              formControlName="telefone" 
-              placeholder="841234567" 
-              maxlength="9"
-              type="tel"
-              inputmode="numeric"
-              autocomplete="tel"
-            />
-            <mat-error *ngIf="loginForm.get('telefone')?.hasError('required') && loginForm.get('telefone')?.touched">
-              O número de telefone é obrigatório.
-            </mat-error>
-            <mat-error *ngIf="loginForm.get('telefone')?.hasError('pattern') && loginForm.get('telefone')?.touched">
-              Insira um número válido em Moçambique com 9 dígitos.
-            </mat-error>
-          </mat-form-field>
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Nova Password</mat-label>
+                  <mat-icon matPrefix>lock</mat-icon>
+                  <input matInput type="password" formControlName="newPassword" placeholder="Mínimo 6 caracteres" />
+                  <mat-error *ngIf="recoveryForm.get('newPassword')?.hasError('required') && recoveryForm.get('newPassword')?.touched">
+                    A password é obrigatória.
+                  </mat-error>
+                  <mat-error *ngIf="recoveryForm.get('newPassword')?.hasError('minlength') && recoveryForm.get('newPassword')?.touched">
+                    Mínimo de 6 caracteres.
+                  </mat-error>
+                </mat-form-field>
 
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Password</mat-label>
-            <mat-icon matPrefix>lock</mat-icon>
-            <input 
-              matInput 
-              [type]="hidePassword ? 'password' : 'text'" 
-              formControlName="password" 
-              placeholder="Insira a password" 
-              autocomplete="current-password"
-            />
-            <button mat-icon-button matSuffix type="button" (click)="hidePassword = !hidePassword" aria-label="Alternar visibilidade da password">
-              <mat-icon>{{ hidePassword ? 'visibility_off' : 'visibility' }}</mat-icon>
-            </button>
-            <mat-error *ngIf="loginForm.get('password')?.invalid && loginForm.get('password')?.touched">
-              A password é obrigatória (mínimo 6 caracteres).
-            </mat-error>
-          </mat-form-field>
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Confirmar Nova Password</mat-label>
+                  <mat-icon matPrefix>lock_outline</mat-icon>
+                  <input matInput type="password" formControlName="confirmNewPassword" placeholder="Confirme a nova password" />
+                  <mat-error *ngIf="recoveryForm.hasError('mismatch') && recoveryForm.get('confirmNewPassword')?.touched">
+                    As passwords não coincidem.
+                  </mat-error>
+                </mat-form-field>
 
-          <button mat-raised-button color="primary" type="submit" class="submit-btn full-width" [disabled]="loginForm.invalid || isLoading">
-            @if (isLoading) {
-              <ng-container>
-                <mat-icon class="spin-animation">sync</mat-icon>
-                <span>A entrar...</span>
-              </ng-container>
-            } @else {
-              <ng-container>
-                <mat-icon>login</mat-icon>
-                <span>Iniciar Sessão</span>
-              </ng-container>
+                <div class="step-actions-row">
+                  <button mat-button type="button" class="back-btn" (click)="recoveryStep = 1; recoveryOtpEnviado = false">
+                    Voltar
+                  </button>
+                  <button mat-raised-button color="primary" type="button" class="action-btn next-btn" [disabled]="recoveryForm.invalid || isLoading" (click)="confirmarRedefinicao()">
+                    @if (isLoading) {
+                      <ng-container>
+                        <mat-icon class="spin-animation">sync</mat-icon>
+                        <span>A guardar...</span>
+                      </ng-container>
+                    } @else {
+                      <ng-container>
+                        <mat-icon>check_circle</mat-icon>
+                        <span>Redefinir Password</span>
+                      </ng-container>
+                    }
+                  </button>
+                </div>
+              </div>
             }
-          </button>
-        </form>
 
-        <div class="form-footer">
-          <p>Ainda não tem conta no AlvorField?</p>
-          <a routerLink="/register" class="register-link">Criar conta como Produtor, Consumidor ou Investidor</a>
-        </div>
-      </mat-card>
+          </form>
+        </mat-card>
+      }
 
     </div>
   </div>

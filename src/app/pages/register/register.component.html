@@ -1,5 +1,5 @@
 <div class="auth-page-wrapper">
-  <!-- Secção esquerda: Branding & Benefícios do Registo (Desktop) -->
+  <!-- Secção esquerda: Branding & Benefícios (Desktop) -->
   <div class="auth-hero-section">
     <div class="hero-bg-overlay"></div>
     <div class="hero-content">
@@ -18,21 +18,21 @@
           <div class="feature-icon"><mat-icon>agriculture</mat-icon></div>
           <div class="feature-text">
             <h3>Para Produtores</h3>
-            <p>Divulgue as suas colheitas antes da colheita e garanta contratos de compra antecipados.</p>
+            <p>Divulgue as suas colheitas ou a capacidade da sua associação e receba propostas de compradores de todo o país.</p>
           </div>
         </div>
         <div class="feature-item">
           <div class="feature-icon"><mat-icon>shopping_basket</mat-icon></div>
           <div class="feature-text">
-            <h3>Para Consumidores</h3>
-            <p>Compre produtos frescos diretamente da machamba com preços competitivos e rastreabilidade total.</p>
+            <h3>Para Compradores</h3>
+            <p>Aceda diretamente a produtores e cooperativas locais, garanta produtos de qualidade e organize a sua cadeia logística.</p>
           </div>
         </div>
         <div class="feature-item">
           <div class="feature-icon"><mat-icon>trending_up</mat-icon></div>
           <div class="feature-text">
             <h3>Para Investidores</h3>
-            <p>Financie produtores qualificados com contratos claros e acompanhe o crescimento via app.</p>
+            <p>Apoie a modernização agrícola fornecendo capital e maquinários para projetos de impacto e acompanhe o progresso de perto.</p>
           </div>
         </div>
       </div>
@@ -43,7 +43,7 @@
     </div>
   </div>
 
-  <!-- Secção direita: Formulário de Registo -->
+  <!-- Secção direita: Formulário de Registo em Passos -->
   <div class="auth-form-section">
     <div class="form-container">
       
@@ -56,127 +56,338 @@
         <p>Crie a sua conta agrícola e tecnológica</p>
       </div>
 
+      <!-- Barra de Passos -->
+      <div class="stepper-indicator">
+        <div class="step-badge" [class.active]="currentStep === 1" [class.completed]="currentStep > 1">
+          <span class="badge-num">@if (currentStep > 1) { <mat-icon>check</mat-icon> } @else { 1 }</span>
+          <span class="badge-label">Verificação</span>
+        </div>
+        <div class="step-line" [class.active]="currentStep > 1"></div>
+        <div class="step-badge" [class.active]="currentStep === 2" [class.completed]="currentStep > 2">
+          <span class="badge-num">@if (currentStep > 2) { <mat-icon>check</mat-icon> } @else { 2 }</span>
+          <span class="badge-label">Conta</span>
+        </div>
+        <div class="step-line" [class.active]="currentStep > 2"></div>
+        <div class="step-badge" [class.active]="currentStep === 3">
+          <span class="badge-num">3</span>
+          <span class="badge-label">Perfil</span>
+        </div>
+      </div>
+
       <div class="form-card-header">
-        <h2>Criar Nova Conta</h2>
-        <p>Preencha os dados abaixo para fazer parte da nossa rede de abastecimento digital.</p>
+        <h2>{{ currentStep === 1 ? 'Validar Telemóvel' : (currentStep === 2 ? 'Configurar Acesso' : 'Completar Perfil') }}</h2>
+        <p>
+          {{ currentStep === 1 ? 'Verifique o seu número de telemóvel para garantir a segurança da conta.' : 
+             (currentStep === 2 ? 'Escolha a password e o tipo de conta que deseja abrir.' : 
+             'Introduza os seus dados de localização e características do seu negócio.') }}
+        </p>
       </div>
 
       <mat-card class="register-mat-card">
         <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="register-form">
           
-          <!-- Nome -->
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Nome Completo / Nome do Negócio</mat-label>
-            <mat-icon matPrefix>person</mat-icon>
-            <input matInput formControlName="nome" placeholder="Ex: Machamba de Gaza Lda ou João Macamo" />
-            <mat-error *ngIf="registerForm.get('nome')?.hasError('required') && registerForm.get('nome')?.touched">
-              O nome é obrigatório.
-            </mat-error>
-            <mat-error *ngIf="registerForm.get('nome')?.hasError('minlength') && registerForm.get('nome')?.touched">
-              O nome deve conter pelo menos 3 caracteres.
-            </mat-error>
-          </mat-form-field>
+          <!-- ================= PASSO 1: TELEFONE E OTP ================= -->
+          @if (currentStep === 1) {
+            <div class="step-content">
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Número de telemóvel</mat-label>
+                <mat-icon matPrefix>phone</mat-icon>
+                <input matInput formControlName="telefone" placeholder="841234567" maxlength="9" [readonly]="otpEnviado" />
+                <span matSuffix class="phone-suffix-label">MZ</span>
+                <mat-error *ngIf="registerForm.get('telefone')?.hasError('required') && registerForm.get('telefone')?.touched">
+                  O número de telefone é obrigatório.
+                </mat-error>
+                <mat-error *ngIf="registerForm.get('telefone')?.hasError('pattern') && registerForm.get('telefone')?.touched">
+                  Insira um número móvel de Moçambique válido (9 dígitos).
+                </mat-error>
+              </mat-form-field>
 
-          <!-- Telefone -->
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Número de telefone</mat-label>
-            <mat-icon matPrefix>phone</mat-icon>
-            <input matInput formControlName="telefone" placeholder="841234567" maxlength="9" />
-            <mat-error *ngIf="registerForm.get('telefone')?.hasError('required') && registerForm.get('telefone')?.touched">
-              O número de telefone é obrigatório.
-            </mat-error>
-            <mat-error *ngIf="registerForm.get('telefone')?.hasError('pattern') && registerForm.get('telefone')?.touched">
-              Insira um número móvel válido com 9 dígitos.
-            </mat-error>
-          </mat-form-field>
+              @if (!otpEnviado) {
+                <button mat-raised-button color="primary" type="button" class="action-btn full-width" [disabled]="isLoading" (click)="solicitarOTP()">
+                  @if (isLoading) {
+                    <ng-container>
+                      <mat-icon class="spin-animation">sync</mat-icon>
+                      <span>A enviar SMS de teste...</span>
+                    </ng-container>
+                  } @else {
+                    <ng-container>
+                      <mat-icon>textsms</mat-icon>
+                      <span>Enviar Código OTP por SMS</span>
+                    </ng-container>
+                  }
+                </button>
+              }
 
-          <!-- Tipo de utilizador -->
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Perfil / Função</mat-label>
-            <mat-icon matPrefix>badge</mat-icon>
-            <mat-select formControlName="tipo">
-              @for (type of userTypes; track type.value) {
-                <mat-option [value]="type.value">
-                  <div class="option-content">
-                    <mat-icon>{{ type.icon }}</mat-icon>
-                    <div class="option-details">
-                      <span class="option-title">{{ type.label }}</span>
+              @if (otpEnviado) {
+                <div class="otp-verification-panel">
+                  <div class="otp-info">
+                    <mat-icon class="otp-icon">sms</mat-icon>
+                    <div class="otp-text">
+                      <p>Enviamos um SMS simulado com um código de 6 dígitos.</p>
+                      <p class="timer-warning">O código expira em: <strong>{{ formatCountdown() }}</strong></p>
                     </div>
                   </div>
-                </mat-option>
+
+                  <mat-form-field appearance="outline" class="full-width">
+                    <mat-label>Código de Verificação OTP</mat-label>
+                    <mat-icon matPrefix>security</mat-icon>
+                    <input matInput formControlName="otpCode" placeholder="Insira o código de 6 dígitos" maxlength="6" />
+                  </mat-form-field>
+
+                  <div class="otp-error-msg" *ngIf="otpError">
+                    <mat-icon>error_outline</mat-icon>
+                    <span>{{ otpError }}</span>
+                  </div>
+
+                  <div class="step-actions-row">
+                    <button mat-button type="button" class="back-btn" (click)="otpEnviado = false; otpError = ''">
+                      Alterar Número
+                    </button>
+                    <button mat-raised-button color="primary" type="button" class="next-btn" (click)="confirmarOTP()">
+                      Confirmar Código
+                    </button>
+                  </div>
+                </div>
               }
-            </mat-select>
-            <mat-error *ngIf="registerForm.get('tipo')?.hasError('required') && registerForm.get('tipo')?.touched">
-              Selecione o seu perfil na plataforma.
-            </mat-error>
-          </mat-form-field>
+            </div>
+          }
 
-          <!-- Localidade -->
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Localização / Distrito</mat-label>
-            <mat-icon matPrefix>place</mat-icon>
-            <input matInput formControlName="localidade" placeholder="Ex: Chókwè, Gaza ou Maputo Cidade" />
-            <mat-error *ngIf="registerForm.get('localidade')?.invalid && registerForm.get('localidade')?.touched">
-              A localização é obrigatória.
-            </mat-error>
-          </mat-form-field>
+          <!-- ================= PASSO 2: CREDENCIAIS & TIPO DE CONTA ================= -->
+          @if (currentStep === 2) {
+            <div class="step-content">
+              <!-- Perfil / Função -->
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Tipo de Conta</mat-label>
+                <mat-icon matPrefix>badge</mat-icon>
+                 <mat-select formControlName="tipo">
+                  <mat-select-trigger>
+                    <div class="selected-value-row" *ngIf="registerForm.get('tipo')?.value" style="display: flex; align-items: center; gap: 8px;">
+                      <mat-icon style="color: #2e7d32; font-size: 20px; width: 20px; height: 20px; margin-right: 4px; display: inline-flex; align-items: center; justify-content: center;">{{ getSelectedTypeIcon(registerForm.get('tipo')?.value) }}</mat-icon>
+                      <span>{{ registerForm.get('tipo')?.value }}</span>
+                    </div>
+                  </mat-select-trigger>
+                  @for (type of userTypes; track type.value) {
+                    <mat-option [value]="type.value">
+                      <div class="option-content-row">
+                        <mat-icon class="opt-icon">{{ type.icon }}</mat-icon>
+                        <div class="opt-text-block">
+                          <span class="opt-title">{{ type.label }}</span>
+                          <span class="opt-desc">{{ type.desc }}</span>
+                        </div>
+                      </div>
+                    </mat-option>
+                  }
+                </mat-select>
+                <mat-error *ngIf="registerForm.get('tipo')?.hasError('required') && registerForm.get('tipo')?.touched">
+                  Selecione o tipo de conta.
+                </mat-error>
+              </mat-form-field>
 
-          <!-- Descrição do Negócio / Machamba -->
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Breve Descrição / O que produz ou procura?</mat-label>
-            <mat-icon matPrefix>description</mat-icon>
-            <textarea matInput formControlName="descricao" rows="2" placeholder="Ex: Produzo 5 toneladas de cebola vermelha por época e tomates..."></textarea>
-            <mat-error *ngIf="registerForm.get('descricao')?.hasError('required') && registerForm.get('descricao')?.touched">
-              A descrição ajuda a ligar compradores a produtores e é obrigatória.
-            </mat-error>
-          </mat-form-field>
+              <!-- Passwords -->
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Password</mat-label>
+                <mat-icon matPrefix>lock</mat-icon>
+                <input matInput [type]="hidePassword ? 'password' : 'text'" formControlName="password" placeholder="Mínimo 6 caracteres" />
+                <button mat-icon-button matSuffix type="button" (click)="hidePassword = !hidePassword">
+                  <mat-icon>{{ hidePassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+                </button>
+                <mat-error *ngIf="registerForm.get('password')?.hasError('required') && registerForm.get('password')?.touched">
+                  A password é obrigatória.
+                </mat-error>
+                <mat-error *ngIf="registerForm.get('password')?.hasError('minlength') && registerForm.get('password')?.touched">
+                  A password deve ter pelo menos 6 caracteres.
+                </mat-error>
+              </mat-form-field>
 
-          <!-- Passwords -->
-          <div class="password-fields-row">
-            <mat-form-field appearance="outline">
-              <mat-label>Password</mat-label>
-              <mat-icon matPrefix>lock</mat-icon>
-              <input matInput [type]="hidePassword ? 'password' : 'text'" formControlName="password" placeholder="Mínimo 6 chars" />
-              <button mat-icon-button matSuffix type="button" (click)="hidePassword = !hidePassword">
-                <mat-icon>{{ hidePassword ? 'visibility_off' : 'visibility' }}</mat-icon>
-              </button>
-              <mat-error *ngIf="registerForm.get('password')?.hasError('required') && registerForm.get('password')?.touched">
-                A password é obrigatória.
-              </mat-error>
-              <mat-error *ngIf="registerForm.get('password')?.hasError('minlength') && registerForm.get('password')?.touched">
-                A password deve ter pelo menos 6 caracteres.
-              </mat-error>
-            </mat-form-field>
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Confirmar Password</mat-label>
+                <mat-icon matPrefix>lock_outline</mat-icon>
+                <input matInput [type]="hideConfirmPassword ? 'password' : 'text'" formControlName="confirmPassword" placeholder="Repita a password" />
+                <button mat-icon-button matSuffix type="button" (click)="hideConfirmPassword = !hideConfirmPassword">
+                  <mat-icon>{{ hideConfirmPassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+                </button>
+                <mat-error *ngIf="registerForm.hasError('mismatch') && registerForm.get('confirmPassword')?.touched">
+                  As passwords não coincidem.
+                </mat-error>
+              </mat-form-field>
 
-            <mat-form-field appearance="outline">
-              <mat-label>Confirmar</mat-label>
-              <mat-icon matPrefix>lock_outline</mat-icon>
-              <input matInput [type]="hideConfirmPassword ? 'password' : 'text'" formControlName="confirmPassword" placeholder="Confirme" />
-              <button mat-icon-button matSuffix type="button" (click)="hideConfirmPassword = !hideConfirmPassword">
-                <mat-icon>{{ hideConfirmPassword ? 'visibility_off' : 'visibility' }}</mat-icon>
-              </button>
-              <mat-error *ngIf="registerForm.hasError('mismatch') && registerForm.get('confirmPassword')?.touched">
-                As passwords não coincidem.
-              </mat-error>
-            </mat-form-field>
-          </div>
+              <div class="step-actions-row">
+                <button mat-button type="button" class="back-btn" (click)="voltarPasso(1)">
+                  <mat-icon>arrow_back</mat-icon> Voltar
+                </button>
+                <button mat-raised-button color="primary" type="button" class="next-btn" (click)="avancarPasso2()">
+                  Continuar <mat-icon>arrow_forward</mat-icon>
+                </button>
+              </div>
+            </div>
+          }
 
-          <button mat-raised-button color="primary" type="submit" class="submit-btn full-width" [disabled]="registerForm.invalid || isLoading">
-            @if (isLoading) {
-              <ng-container>
-                <mat-icon class="spin-animation">sync</mat-icon>
-                <span>A criar conta...</span>
-              </ng-container>
-            } @else {
-              <ng-container>
-                <mat-icon>person_add</mat-icon>
-                <span>Criar Conta Grátis</span>
-              </ng-container>
-            }
-          </button>
+          <!-- ================= PASSO 3: PERFIL COMPLETO & CAMPOS EXTRA ================= -->
+          @if (currentStep === 3) {
+            <div class="step-content">
+              <!-- Nome Completo / Organização -->
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>
+                  {{ registerForm.get('tipo')?.value === 'Cooperativa' ? 'Nome da Cooperativa / Associação' : 'Nome Completo' }}
+                </mat-label>
+                <mat-icon matPrefix>person</mat-icon>
+                <input matInput formControlName="nome" placeholder="Ex: João Mandlate ou Cooperativa Agrícola de Limpopo" />
+                <mat-error *ngIf="registerForm.get('nome')?.hasError('required') && registerForm.get('nome')?.touched">
+                  O nome é obrigatório.
+                </mat-error>
+                <mat-error *ngIf="registerForm.get('nome')?.hasError('minlength') && registerForm.get('nome')?.touched">
+                  O nome deve conter pelo menos 3 caracteres.
+                </mat-error>
+              </mat-form-field>
+
+              <!-- Localização: Província e Distrito -->
+              <div class="location-row">
+                <mat-form-field appearance="outline">
+                  <mat-label>Província</mat-label>
+                  <mat-icon matPrefix>map</mat-icon>
+                  <mat-select formControlName="provincia">
+                    @for (prov of provinces; track prov.nome) {
+                      <mat-option [value]="prov.nome">{{ prov.nome }}</mat-option>
+                    }
+                  </mat-select>
+                  <mat-error *ngIf="registerForm.get('provincia')?.invalid && registerForm.get('provincia')?.touched">
+                    Selecione a província.
+                  </mat-error>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Distrito</mat-label>
+                  <mat-icon matPrefix>place</mat-icon>
+                  <mat-select formControlName="distrito" [disabled]="!registerForm.get('provincia')?.value">
+                    @for (dist of districts; track dist) {
+                      <mat-option [value]="dist">{{ dist }}</mat-option>
+                    }
+                  </mat-select>
+                  <mat-error *ngIf="registerForm.get('distrito')?.invalid && registerForm.get('distrito')?.touched">
+                    Selecione o distrito.
+                  </mat-error>
+                </mat-form-field>
+              </div>
+
+              <!-- ================= CAMPOS DINÂMICOS CONDIZENTES COM O TIPO DE CONTA ================= -->
+              
+              <!-- Produtor Individual / Cooperativa: Área de Cultivo (RF-04) -->
+              @if (registerForm.get('tipo')?.value === 'Produtor Individual' || registerForm.get('tipo')?.value === 'Cooperativa') {
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Área aproximada de cultivo (hectares)</mat-label>
+                  <mat-icon matPrefix>square_foot</mat-icon>
+                  <input matInput type="number" formControlName="areaCultivo" placeholder="Ex: 5.5" min="0.1" step="0.1" />
+                  <mat-error *ngIf="registerForm.get('areaCultivo')?.invalid && registerForm.get('areaCultivo')?.touched">
+                    Insira uma área de cultivo válida (número positivo maior que 0).
+                  </mat-error>
+                </mat-form-field>
+              }
+
+              <!-- Cooperativa: Membros & Nome Associação (RF-05) -->
+              @if (registerForm.get('tipo')?.value === 'Cooperativa') {
+                <div class="coop-row">
+                  <mat-form-field appearance="outline">
+                    <mat-label>Número de Membros</mat-label>
+                    <mat-icon matPrefix>groups</mat-icon>
+                    <input matInput type="number" formControlName="numMembros" placeholder="Ex: 24" min="2" />
+                    <mat-error *ngIf="registerForm.get('numMembros')?.invalid && registerForm.get('numMembros')?.touched">
+                      Número de membros deve ser no mínimo 2.
+                    </mat-error>
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline">
+                    <mat-label>Nome Oficial da Associação</mat-label>
+                    <mat-icon matPrefix>business</mat-icon>
+                    <input matInput formControlName="nomeAssociacao" placeholder="Ex: Associação Esperança do Limpopo" />
+                    <mat-error *ngIf="registerForm.get('nomeAssociacao')?.invalid && registerForm.get('nomeAssociacao')?.touched">
+                      Nome da associação é obrigatório (mínimo 3 caracteres).
+                    </mat-error>
+                  </mat-form-field>
+                </div>
+              }
+
+              <!-- Comprador: Tipo de Comprador e Produtos de Interesse (RF-06) -->
+              @if (registerForm.get('tipo')?.value === 'Comprador') {
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Tipo de Comprador</mat-label>
+                  <mat-icon matPrefix>storefront</mat-icon>
+                  <mat-select formControlName="tipoComprador">
+                    @for (buyer of buyerTypes; track buyer) {
+                      <mat-option [value]="buyer">{{ buyer }}</mat-option>
+                    }
+                  </mat-select>
+                  <mat-error *ngIf="registerForm.get('tipoComprador')?.invalid && registerForm.get('tipoComprador')?.touched">
+                    Selecione o tipo de comprador.
+                  </mat-error>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Produtos de Interesse</mat-label>
+                  <mat-icon matPrefix>shopping_bag</mat-icon>
+                  <mat-select formControlName="produtosInteresse" multiple>
+                    @for (prod of availableProducts; track prod.value) {
+                      <mat-option [value]="prod.value">{{ prod.label }}</mat-option>
+                    }
+                  </mat-select>
+                  <mat-error *ngIf="registerForm.get('produtosInteresse')?.invalid && registerForm.get('produtosInteresse')?.touched">
+                    Selecione pelo menos um produto de interesse.
+                  </mat-error>
+                </mat-form-field>
+              }
+
+              <!-- Investidor: Tipo de Instituição (RF-07) -->
+              @if (registerForm.get('tipo')?.value === 'Investidor') {
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Tipo de Instituição Financeira</mat-label>
+                  <mat-icon matPrefix>account_balance</mat-icon>
+                  <mat-select formControlName="tipoInstituicao">
+                    @for (inst of institutionTypes; track inst) {
+                      <mat-option [value]="inst">{{ inst }}</mat-option>
+                    }
+                  </mat-select>
+                  <mat-error *ngIf="registerForm.get('tipoInstituicao')?.invalid && registerForm.get('tipoInstituicao')?.touched">
+                    Selecione o tipo de instituição.
+                  </mat-error>
+                </mat-form-field>
+              }
+
+              <!-- Descrição -->
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Descrição da sua atividade / O que procura?</mat-label>
+                <mat-icon matPrefix>description</mat-icon>
+                <textarea matInput formControlName="descricao" rows="2" placeholder="Ex: Agricultor com foco em milho ou Empresa buscando expandir compras no centro de Moçambique..."></textarea>
+                <mat-error *ngIf="registerForm.get('descricao')?.hasError('required') && registerForm.get('descricao')?.touched">
+                  A descrição é obrigatória.
+                </mat-error>
+                <mat-error *ngIf="registerForm.get('descricao')?.hasError('maxlength') && registerForm.get('descricao')?.touched">
+                  A descrição não pode exceder 250 caracteres.
+                </mat-error>
+              </mat-form-field>
+
+              <div class="step-actions-row">
+                <button mat-button type="button" class="back-btn" (click)="voltarPasso(2)">
+                  <mat-icon>arrow_back</mat-icon> Voltar
+                </button>
+                <button mat-raised-button color="primary" type="submit" class="submit-btn" [disabled]="registerForm.invalid || isLoading">
+                  @if (isLoading) {
+                    <ng-container>
+                      <mat-icon class="spin-animation">sync</mat-icon>
+                      <span>A registar...</span>
+                    </ng-container>
+                  } @else {
+                    <ng-container>
+                      <mat-icon>check_circle</mat-icon>
+                      <span>Finalizar Registo</span>
+                    </ng-container>
+                  }
+                </button>
+              </div>
+            </div>
+          }
+
         </form>
 
-        <div class="form-footer">
+        <div class="form-footer" *ngIf="currentStep === 1">
           <p>Já tem uma conta no AlvorField?</p>
           <a routerLink="/login" class="login-link">Fazer login agora</a>
         </div>

@@ -8,12 +8,11 @@
 .auth-page-wrapper {
   display: flex;
   flex: 1;
-  align-items: stretch; // Garante que as colunas estiquem juntas até ao fundo
+  align-items: stretch;
   min-height: calc(100vh - 64px);
   width: 100%;
   background: #f7f9fa;
   font-family: 'Inter', sans-serif;
-  overflow: visible;
 }
 
 // ==========================================================================
@@ -28,7 +27,6 @@
   justify-content: center;
   padding: 48px;
   color: white;
-  overflow: visible; // Permite rolar apenas pela barra da página principal
 
   .hero-bg-overlay {
     position: absolute;
@@ -70,9 +68,9 @@
       font-size: 1.8rem;
       font-weight: 800;
       letter-spacing: -1px;
-      line-height: 1.3; // Evita corte por baixo
+      line-height: 1.3;
       color: white;
-      padding-bottom: 4px; // Margem de segurança
+      padding-bottom: 4px;
     }
   }
 
@@ -157,7 +155,6 @@
   justify-content: center;
   padding: 48px;
   background: #fcfdfe;
-  overflow: visible;
 
   .form-container {
     max-width: 480px;
@@ -187,6 +184,77 @@
   }
 }
 
+// Stepper Progress Indicator
+.stepper-indicator {
+  display: flex;
+  align-items: center;
+  margin-bottom: 30px;
+  justify-content: space-between;
+  background: #f1f5f9;
+  padding: 10px 16px;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+
+  .step-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #64748b;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+
+    .badge-num {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #cbd5e1;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      font-weight: 700;
+      transition: all 0.3s ease;
+
+      mat-icon {
+        font-size: 14px;
+        width: 14px;
+        height: 14px;
+      }
+    }
+
+    &.active {
+      color: #1565c0;
+      
+      .badge-num {
+        background: #1565c0;
+        box-shadow: 0 0 0 4px rgba(21, 101, 192, 0.2);
+      }
+    }
+
+    &.completed {
+      color: #2e7d32;
+
+      .badge-num {
+        background: #2e7d32;
+      }
+    }
+  }
+
+  .step-line {
+    flex: 1;
+    height: 2px;
+    background: #cbd5e1;
+    margin: 0 10px;
+    transition: all 0.3s ease;
+
+    &.active {
+      background: #2e7d32;
+    }
+  }
+}
+
 .register-mat-card {
   border-radius: 20px !important;
   border: 1px solid #edf2f7;
@@ -199,28 +267,129 @@
     flex-direction: column;
     gap: 6px;
 
+    .step-content {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
     .full-width {
       width: 100%;
     }
 
-    .password-fields-row {
+    .phone-suffix-label {
+      color: #94a3b8;
+      font-weight: 700;
+      font-size: 0.85rem;
+      margin-right: 8px;
+    }
+
+    .location-row, .coop-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 12px;
       width: 100%;
 
-      .mat-mdc-form-field {
+      mat-form-field {
         width: 100%;
       }
     }
   }
 
-  .submit-btn {
+  .otp-verification-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background: #f8fafc;
+    border-radius: 12px;
+    padding: 16px;
+    border: 1px solid #e2e8f0;
+
+    .otp-info {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      margin-bottom: 8px;
+
+      .otp-icon {
+        color: #1565c0;
+        background: rgba(21, 101, 192, 0.1);
+        padding: 6px;
+        border-radius: 8px;
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+      }
+
+      .otp-text {
+        font-size: 0.85rem;
+        color: #475569;
+        line-height: 1.4;
+
+        p {
+          margin: 0;
+        }
+
+        .timer-warning {
+          margin-top: 4px;
+          color: #d32f2f;
+        }
+      }
+    }
+
+    .otp-error-msg {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #d32f2f;
+      font-size: 0.82rem;
+      font-weight: 600;
+      background: #fef2f2;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid #fee2e2;
+
+      mat-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+      }
+    }
+  }
+
+  .step-actions-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 16px;
+    gap: 12px;
+
+    button {
+      height: 46px;
+      border-radius: 12px !important;
+      font-weight: 600;
+    }
+
+    .back-btn {
+      color: #64748b;
+      border: 1px solid #cbd5e1 !important;
+      flex: 1;
+
+      &:hover {
+        background: #f1f5f9;
+      }
+    }
+
+    .next-btn, .submit-btn {
+      flex: 1.5;
+    }
+  }
+
+  .action-btn, .submit-btn {
     height: 48px;
     font-size: 1rem;
     font-weight: 700;
     border-radius: 12px !important;
-    margin-top: 12px;
     letter-spacing: 0.3px;
     transition: all 0.3s ease;
     background: #2e7d32 !important;
@@ -263,28 +432,39 @@
   }
 }
 
-// Styling para a dropdown options do select
-.option-content {
+// Select account type design
+.option-content-row {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 4px 0;
+  padding: 6px 0;
 
-  mat-icon {
+  .opt-icon {
     color: #2e7d32;
-    font-size: 20px;
-    width: 20px;
-    height: 20px;
+    font-size: 24px;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
-  .option-details {
+  .opt-text-block {
     display: flex;
     flex-direction: column;
-
-    .option-title {
+    
+    .opt-title {
       font-weight: 600;
       font-size: 0.9rem;
-      color: #2c3e50;
+      color: #1e293b;
+      line-height: 1.2;
+    }
+
+    .opt-desc {
+      font-size: 0.75rem;
+      color: #64748b;
+      line-height: 1.2;
+      margin-top: 2px;
     }
   }
 }
@@ -358,7 +538,7 @@
 
     .register-mat-card {
       .register-form {
-        .password-fields-row {
+        .location-row, .coop-row {
           grid-template-columns: 1fr;
           gap: 0;
         }

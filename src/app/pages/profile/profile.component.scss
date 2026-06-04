@@ -1,0 +1,264 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  width: 100%;
+}
+
+.profile-page-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px 16px;
+  background: #f8fafc;
+  min-height: calc(100vh - 64px);
+  font-family: 'Inter', sans-serif;
+  box-sizing: border-box;
+}
+
+.profile-container {
+  max-width: 720px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+// Header card estilo Banner Premium
+.profile-header-card {
+  position: relative;
+  background: linear-gradient(135deg, #1b5e20 0%, #1565c0 100%);
+  border-radius: 24px;
+  padding: 32px;
+  color: white;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(21, 101, 192, 0.15);
+
+  .header-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 0);
+    background-size: 30px 30px;
+    opacity: 0.3;
+  }
+
+  .header-user-info {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .avatar-circle {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(8px);
+    border: 2px solid white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+
+    mat-icon {
+      font-size: 42px;
+      width: 42px;
+      height: 42px;
+      color: white;
+    }
+  }
+
+  .user-meta-details {
+    h2 {
+      font-size: 1.8rem;
+      font-weight: 800;
+      margin: 0 0 6px 0;
+      letter-spacing: -0.5px;
+    }
+
+    .badges-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .badge-role {
+      background: #e8f5e9;
+      color: #2e7d32;
+      font-size: 0.72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      border-radius: 20px;
+      letter-spacing: 0.5px;
+    }
+
+    .badge-location {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #e2e8f0;
+
+      mat-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+      }
+    }
+  }
+}
+
+// Form Card
+.profile-mat-card {
+  border-radius: 24px !important;
+  border: 1px solid #edf2f7;
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.03) !important;
+  padding: 32px;
+  background: white;
+
+  .card-header {
+    margin-bottom: 24px;
+    border-bottom: 1px solid #f1f5f9;
+    padding-bottom: 16px;
+
+    h3 {
+      font-size: 1.25rem;
+      font-weight: 750;
+      color: #0f172a;
+      margin: 0 0 4px 0;
+    }
+
+    p {
+      color: #64748b;
+      font-size: 0.9rem;
+      margin: 0;
+      line-height: 1.5;
+    }
+  }
+
+  .profile-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+
+    .full-width {
+      width: 100%;
+    }
+
+    .form-grid-two {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      width: 100%;
+
+      mat-form-field {
+        width: 100%;
+      }
+    }
+  }
+
+  .actions-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-top: 16px;
+
+    button {
+      height: 48px;
+      border-radius: 12px !important;
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    .back-btn {
+      color: #64748b;
+      border: 1px solid #cbd5e1 !important;
+      flex: 1;
+
+      mat-icon {
+        margin-right: 4px;
+      }
+
+      &:hover {
+        background: #f1f5f9;
+      }
+    }
+
+    .save-btn {
+      flex: 1.5;
+      background: #2e7d32 !important;
+      color: white !important;
+      letter-spacing: 0.2px;
+
+      mat-icon {
+        margin-right: 6px;
+      }
+
+      &:hover:not(:disabled) {
+        background: #1b5e20 !important;
+        box-shadow: 0 4px 15px rgba(46, 125, 50, 0.3);
+      }
+    }
+  }
+}
+
+.spin-animation {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  100% { transform: rotate(360deg); }
+}
+
+// Responsividade
+@media (max-width: 600px) {
+  .profile-page-wrapper {
+    padding: 16px 8px;
+  }
+
+  .profile-header-card {
+    padding: 20px;
+
+    .header-user-info {
+      flex-direction: column;
+      text-align: center;
+      gap: 12px;
+    }
+  }
+
+  .profile-mat-card {
+    padding: 20px;
+
+    .profile-form {
+      .form-grid-two {
+        grid-template-columns: 1fr;
+        gap: 0;
+      }
+    }
+
+    .actions-row {
+      flex-direction: column;
+      
+      button {
+        width: 100%;
+      }
+      
+      .back-btn {
+        order: 2;
+      }
+      
+      .save-btn {
+        order: 1;
+      }
+    }
+  }
+}

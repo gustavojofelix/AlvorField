@@ -4,7 +4,7 @@ import { authGuard } from './guards/auth.guard';
 /**
  * Definição das rotas da aplicação AlvorField.
  * - /login e /register são públicas.
- * - /dashboard é protegido pelo authGuard.
+ * - /dashboard e /perfil são protegidos pelo authGuard.
  * - A rota raiz redireciona para /dashboard.
  */
 export const routes: Routes = [
@@ -30,6 +30,15 @@ export const routes: Routes = [
       ),
     canActivate: [authGuard],
     title: 'Painel — AlvorField',
+  },
+  {
+    path: 'perfil',
+    loadComponent: () =>
+      import('./pages/profile/profile.component').then(
+        (m) => m.ProfileComponent
+      ),
+    canActivate: [authGuard],
+    title: 'Meu Perfil — AlvorField',
   },
   {
     path: '',
