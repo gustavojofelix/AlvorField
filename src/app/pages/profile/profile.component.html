@@ -196,6 +196,107 @@
           </mat-error>
         </mat-form-field>
 
+        <!-- Modulo 8: Definições de Notificação (RF-60) -->
+        <div class="notification-settings-section" style="margin: 28px 0; border-top: 1px dashed #cbd5e1; padding-top: 24px;">
+          <h4 style="font-weight: 700; color: #1e293b; margin-top: 0; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; font-size: 1.1rem;">
+            <mat-icon style="color: #2e7d32;">notifications_active</mat-icon>
+            Definições de Comunicação & Notificações
+          </h4>
+          <p style="font-size: 0.88rem; color: #64748b; margin-bottom: 20px; line-height: 1.4;">
+            Configure os canais (SMS, E-mail ou Push/PWA) que deseja utilizar para cada um dos alertas do sistema. Para receber notificações por e-mail, é necessário fornecer um endereço de correio eletrónico válido.
+          </p>
+
+          <mat-form-field appearance="outline" class="full-width" style="margin-bottom: 12px;">
+            <mat-label>Endereço de E-mail</mat-label>
+            <mat-icon matPrefix>email</mat-icon>
+            <input matInput type="email" formControlName="email" placeholder="Ex: joao.mandlate@alvor.co.mz" />
+            <mat-hint>Opcional. Necessário para receber notificações por E-mail (RF-58).</mat-hint>
+            <mat-error *ngIf="profileForm.get('email')?.invalid && profileForm.get('email')?.touched">
+              Introduza um e-mail válido.
+            </mat-error>
+          </mat-form-field>
+
+          <div style="margin-top: 20px; border: 1px solid #e2e8f0; border-radius: 12px; overflow-x: auto; background: #fafafa;">
+            <!-- Tabela responsiva de preferências -->
+            <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem; min-width: 500px;">
+              <thead>
+                <tr style="background: #f1f5f9; border-bottom: 1px solid #e2e8f0; color: #475569; font-weight: 600;">
+                  <th style="padding: 14px 16px;">Evento / Alerta</th>
+                  <th style="padding: 14px 16px; text-align: center; width: 100px;">SMS</th>
+                  <th style="padding: 14px 16px; text-align: center; width: 120px;">E-mail</th>
+                  <th style="padding: 14px 16px; text-align: center; width: 120px;">Push (PWA)</th>
+                </tr>
+              </thead>
+              <tbody style="color: #334155;">
+                <!-- Linha OTP -->
+                <tr style="border-bottom: 1px solid #e2e8f0;">
+                  <td style="padding: 14px 16px;">
+                    <div style="font-weight: 600; color: #1e293b;">Código de Registo OTP (RF-57)</div>
+                    <div style="font-size: 0.8rem; color: #64748b;">Código enviado para validar nova conta ou repor password.</div>
+                  </td>
+                  <td style="padding: 14px 16px; text-align: center;">
+                    <mat-checkbox formControlName="notifSMS_otp" color="primary"></mat-checkbox>
+                  </td>
+                  <td style="padding: 14px 16px; text-align: center;">
+                    <mat-checkbox formControlName="notifEmail_otp" color="primary" [disabled]="!profileForm.value.email"></mat-checkbox>
+                  </td>
+                  <td style="padding: 14px 16px; text-align: center;">
+                    <mat-checkbox formControlName="notifPush_otp" color="primary"></mat-checkbox>
+                  </td>
+                </tr>
+                <!-- Linha Interesse -->
+                <tr style="border-bottom: 1px solid #e2e8f0;">
+                  <td style="padding: 14px 16px;">
+                    <div style="font-weight: 600; color: #1e293b;">Novo Interesse em Oferta (RF-57)</div>
+                    <div style="font-size: 0.8rem; color: #64748b;">Notifica o produtor sobre manifestação de interesse por comprador.</div>
+                  </td>
+                  <td style="padding: 14px 16px; text-align: center;">
+                    <mat-checkbox formControlName="notifSMS_interesse" color="primary"></mat-checkbox>
+                  </td>
+                  <td style="padding: 14px 16px; text-align: center;">
+                    <mat-checkbox formControlName="notifEmail_interesse" color="primary" [disabled]="!profileForm.value.email"></mat-checkbox>
+                  </td>
+                  <td style="padding: 14px 16px; text-align: center;">
+                    <mat-checkbox formControlName="notifPush_interesse" color="primary"></mat-checkbox>
+                  </td>
+                </tr>
+                <!-- Linha Aceitação -->
+                <tr style="border-bottom: 1px solid #e2e8f0;">
+                  <td style="padding: 14px 16px;">
+                    <div style="font-weight: 600; color: #1e293b;">Aceitação de Contacto (RF-57)</div>
+                    <div style="font-size: 0.8rem; color: #64748b;">Notifica o comprador quando o produtor revela o seu contacto.</div>
+                  </td>
+                  <td style="padding: 14px 16px; text-align: center;">
+                    <mat-checkbox formControlName="notifSMS_aceite" color="primary"></mat-checkbox>
+                  </td>
+                  <td style="padding: 14px 16px; text-align: center;">
+                    <mat-checkbox formControlName="notifEmail_aceite" color="primary" [disabled]="!profileForm.value.email"></mat-checkbox>
+                  </td>
+                  <td style="padding: 14px 16px; text-align: center;">
+                    <mat-checkbox formControlName="notifPush_aceite" color="primary"></mat-checkbox>
+                  </td>
+                </tr>
+                <!-- Linha Recusa -->
+                <tr>
+                  <td style="padding: 14px 16px;">
+                    <div style="font-weight: 600; color: #1e293b;">Recusa de Contacto (RF-57)</div>
+                    <div style="font-size: 0.8rem; color: #64748b;">Notifica o comprador quando o interesse for recusado pelo produtor.</div>
+                  </td>
+                  <td style="padding: 14px 16px; text-align: center;">
+                    <mat-checkbox formControlName="notifSMS_recusa" color="primary"></mat-checkbox>
+                  </td>
+                  <td style="padding: 14px 16px; text-align: center;">
+                    <mat-checkbox formControlName="notifEmail_recusa" color="primary" [disabled]="!profileForm.value.email"></mat-checkbox>
+                  </td>
+                  <td style="padding: 14px 16px; text-align: center;">
+                    <mat-checkbox formControlName="notifPush_recusa" color="primary"></mat-checkbox>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         <!-- Botões de Ação -->
         <div class="actions-row">
           <button mat-button type="button" class="back-btn" (click)="voltar()">

@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { AuthService } from './auth.service';
 import { OfferService, Offer } from './offer.service';
+import { NotificationService } from './notification.service';
 
 export interface Interest {
   id: number;
@@ -33,7 +34,8 @@ export class InterestService {
 
   constructor(
     private authService: AuthService,
-    private offerService: OfferService
+    private offerService: OfferService,
+    private notificationService: NotificationService
   ) {
     this.initializeMockInterests();
   }
@@ -113,10 +115,18 @@ export class InterestService {
     interests.unshift(newInterest);
     this.saveInterests(interests);
 
-    // RF-33: Notificar produtor através de SMS e notificação push (simulação consola)
-    const notificationSummary = `[${currentUser.nome}] está interessado na sua oferta de [${offer.produto}]`;
-    console.info(`[SMS ENVIADO AO PRODUTOR ${offer.produtorNome} (${offer.produtorId})]: ${notificationSummary}`);
-    console.info(`[PUSH NOTIFICATION ENVIADA AO PRODUTOR ${offer.produtorNome}]: ${notificationSummary}`);
+    // RF-33, RF-57: Novo interesse sobre oferta do produtor (com nome do comprador e produto)
+    const producer = this.authService.getUsers().find(u => u.id === offer.produtorId);
+    const produtorTelefone = producer ? producer.telefone : '';
+    const notificationSummary = `${currentUser.nome} está interessado na sua oferta de ${offer.produto}.`;
+    this.notificationService.sendNotification(
+      offer.produtorId,
+      'interesse',
+      'Novo Interesse Recebido',
+      notificationSummary,
+      produtorTelefone,
+      offer.produtorNome
+    );
 
     return newInterest;
   }
@@ -154,10 +164,16 @@ export class InterestService {
     interest.produtorTelefone = producer.telefone; // Revela o contacto do produtor
     this.saveInterests(interests);
 
-    // RF-36: Notificar comprador via SMS e App/Push com o contacto do produtor
-    const notificationMsg = `O produtor ${producer.nome} aceitou o seu contacto para a oferta de ${interest.produto}. Telefone: ${producer.telefone}. Já pode contactar via WhatsApp ou chamada direta!`;
-    console.info(`[SMS ENVIADO AO COMPRADOR ${interest.compradorNome}]: ${notificationMsg}`);
-    console.info(`[PUSH/APP NOTIFICATION ENVIADA AO COMPRADOR ${interest.compradorNome}]: ${notificationMsg}`);
+    // RF-36, RF-57: Aceitação de contacto (para comprador com contacto do produtor)
+    const notificationMsg = `O produtor ${producer.nome} aceitou o seu contacto para a oferta de ${interest.produto}. Contacto do produtor: ${producer.telefone}.`;
+    this.notificationService.sendNotification(
+      interest.compradorId,
+      'aceite',
+      'Contacto Aceite pelo Produtor',
+      notificationMsg,
+      interest.compradorTelefone,
+      interest.compradorNome
+    );
   }
 
   // RF-35: O produtor escolhe "Recusar"
@@ -170,9 +186,16 @@ export class InterestService {
     interest.status = 'Recusado';
     this.saveInterests(interests);
 
-    // Notificar comprador sobre a recusa (consola/simulado)
-    const notificationMsg = `Lamentamos, mas o produtor ${interest.produtorNome} recusou o interesse na oferta de ${interest.produto}.`;
-    console.info(`[SMS/APP NOTIFICATION ENVIADA AO COMPRADOR ${interest.compradorNome}]: ${notificationMsg}`);
+    // RF-57: Recusa de contacto
+    const notificationMsg = `O produtor ${interest.produtorNome} recusou o interesse na oferta de ${interest.produto}.`;
+    this.notificationService.sendNotification(
+      interest.compradorId,
+      'recusa',
+      'Contacto Recusado pelo Produtor',
+      notificationMsg,
+      interest.compradorTelefone,
+      interest.compradorNome
+    );
   }
 
   // RF-39, RF-40, RF-41

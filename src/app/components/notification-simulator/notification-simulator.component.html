@@ -1,0 +1,234 @@
+<!-- Botão Flutuante (FAB) -->
+<button class="fab-trigger" (click)="togglePanel()" [matTooltip]="'Simulador de Notificações AlvorField (Modulo 8)'" matTooltipPosition="left">
+  <div class="fab-badge" *ngIf="unreadCount > 0">{{ unreadCount }}</div>
+  <mat-icon class="fab-icon">message_circle</mat-icon>
+</button>
+
+<!-- Painel do Simulador -->
+<div class="simulator-panel" [class.panel-open]="isOpen">
+  <!-- Cabeçalho -->
+  <div class="panel-header">
+    <div class="header-info">
+      <h3>
+        <mat-icon>settings_phone</mat-icon>
+        Simulador de Comunicação
+      </h3>
+      <span class="pwa-badge">RF-57 a RF-60 (Módulo 8)</span>
+    </div>
+    <div class="header-actions">
+      <button mat-icon-button class="clear-btn" (click)="clearAll()" title="Limpar Logs" *ngIf="notifications.length > 0">
+        <mat-icon>delete_sweep</mat-icon>
+      </button>
+      <button mat-icon-button class="close-btn" (click)="togglePanel()" title="Fechar Simulador">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+  </div>
+
+  <!-- Navegação de Abas -->
+  <div class="simulator-tabs">
+    <button class="tab-btn" [class.tab-active]="activeTab === 'sms'" (click)="setTab('sms')">
+      <mat-icon>sms</mat-icon>
+      <span>SMS ({{ getSMS().length }})</span>
+    </button>
+    <button class="tab-btn" [class.tab-active]="activeTab === 'email'" (click)="setTab('email')">
+      <mat-icon>email</mat-icon>
+      <span>E-mail ({{ getEmails().length }})</span>
+    </button>
+    <button class="tab-btn" [class.tab-active]="activeTab === 'push'" (click)="setTab('push')">
+      <mat-icon>notifications_active</mat-icon>
+      <span>Push ({{ getPush().length }})</span>
+    </button>
+  </div>
+
+  <!-- Conteúdo Principal -->
+  <div class="panel-body">
+
+    <!-- ABA: SMS (Simulador de Telemóvel) -->
+    <div class="tab-content sms-tab" *ngIf="activeTab === 'sms'">
+      <div class="smartphone-frame">
+        <div class="phone-speaker"></div>
+        <div class="phone-screen">
+          <div class="phone-header">
+            <span class="phone-time">16:24</span>
+            <div class="phone-signals">
+              <mat-icon>signal_cellular_alt</mat-icon>
+              <mat-icon>wifi</mat-icon>
+              <mat-icon>battery_std</mat-icon>
+            </div>
+          </div>
+          
+          <div class="phone-chat-header">
+            <mat-icon class="back-arrow">chevron_left</mat-icon>
+            <div class="avatar-sm">AF</div>
+            <div class="chat-title">
+              <strong>AlvorField SMS Gateway</strong>
+              <small>Online</small>
+            </div>
+            <mat-icon class="phone-call-icon">phone</mat-icon>
+          </div>
+
+          <div class="phone-chat-messages">
+            <div class="empty-state" *ngIf="getSMS().length === 0">
+              <mat-icon class="empty-icon">sms_failed</mat-icon>
+              <p>Nenhuma mensagem SMS simulada.</p>
+              <small>Registe-se ou envie propostas de interesse para gerar tráfego de SMS.</small>
+            </div>
+
+            <div class="sms-bubble-group" *ngFor="let sms of getSMS()">
+              <div class="sms-meta">Destino: <strong>{{ formatPhone(sms.recipient) }}</strong> ({{ sms.userName }})</div>
+              <div class="sms-bubble">
+                <p>{{ sms.body }}</p>
+                <span class="sms-time">{{ sms.timestamp | date:'HH:mm' }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="phone-input-bar">
+            <mat-icon>add</mat-icon>
+            <div class="mock-input">Mensagens enviadas pelo sistema...</div>
+            <mat-icon>mic</mat-icon>
+          </div>
+        </div>
+        <div class="phone-home-btn"></div>
+      </div>
+    </div>
+
+    <!-- ABA: E-MAILS (Simulador de Inbox de E-mail) -->
+    <div class="tab-content email-tab" *ngIf="activeTab === 'email'">
+      <div class="email-client-frame">
+        <!-- Lista de Emails (Esquerda) -->
+        <div class="email-list">
+          <div class="email-list-header">
+            <strong>Entrada</strong>
+            <span class="email-badge" *ngIf="getEmails().length > 0">{{ getEmails().length }}</span>
+          </div>
+
+          <div class="empty-state" *ngIf="getEmails().length === 0" style="padding: 30px 10px;">
+            <mat-icon class="empty-icon">mail_outline</mat-icon>
+            <p>Inbox vazia.</p>
+            <small>Configure um e-mail no perfil e faça ações para receber alertas.</small>
+          </div>
+
+          <div class="email-item" 
+               *ngFor="let em of getEmails()" 
+               [class.item-active]="selectedEmail?.id === em.id"
+               (click)="selectEmail(em)">
+            <div class="email-item-top">
+              <span class="email-sender">AlvorField Alertas</span>
+              <span class="email-time">{{ em.timestamp | date:'HH:mm' }}</span>
+            </div>
+            <div class="email-subject">{{ em.title }}</div>
+            <div class="email-preview">{{ em.body }}</div>
+            <div class="email-to">Para: {{ em.recipient }}</div>
+          </div>
+        </div>
+
+        <!-- Visualizador de Email (Direita) -->
+        <div class="email-viewer">
+          <div class="empty-state" *ngIf="!selectedEmail">
+            <mat-icon class="empty-icon">drafts</mat-icon>
+            <p>Selecione um e-mail para ler.</p>
+          </div>
+
+          <div class="email-detail" *ngIf="selectedEmail">
+            <div class="detail-header">
+              <h2>{{ selectedEmail.title }}</h2>
+              <div class="detail-meta">
+                <div class="meta-sender">
+                  <div class="avatar-sender">AF</div>
+                  <div>
+                    <strong>AlvorField Communications</strong>
+                    <small>De: noreply&#64;alvorfield.co.mz</small>
+                  </div>
+                </div>
+                <div class="meta-date">
+                  {{ selectedEmail.timestamp | date:'dd MMM yyyy, HH:mm' }}
+                </div>
+              </div>
+              <div class="detail-recipient">
+                Para: <strong>{{ selectedEmail.userName }}</strong> &lt;{{ selectedEmail.recipient }}&gt;
+              </div>
+            </div>
+
+            <div class="detail-body">
+              <div class="email-branding">
+                <span class="brand-text">Alvor<span>Field</span></span>
+              </div>
+              
+              <div class="email-content-box">
+                <p>Olá <strong>{{ selectedEmail.userName }}</strong>,</p>
+                
+                <div class="alert-box">
+                  <mat-icon class="alert-icon">info</mat-icon>
+                  <p>{{ selectedEmail.body }}</p>
+                </div>
+                
+                <p>Esta é uma notificação automática gerada pela plataforma AlvorField para Moçambique.</p>
+                
+                <p style="margin-top: 30px;">Melhores cumprimentos,<br><strong>Equipa AlvorField</strong></p>
+              </div>
+
+              <div class="email-footer">
+                <p>© 2026 AlvorField, Moçambique. Todos os direitos reservados.</p>
+                <p>Recebeu este e-mail porque tem a opção ativa nas definições do seu perfil.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ABA: PUSH NOTIFICATIONS (Browser & PWA) -->
+    <div class="tab-content push-tab" *ngIf="activeTab === 'push'">
+      <div class="push-control-card">
+        <h4>Integração PWA / Browser Push (RF-59)</h4>
+        <p>A aplicação AlvorField suporta envio de Push Notifications no browser e telemóvel quando instalada como PWA.</p>
+        
+        <div class="permission-status">
+          <div class="status-indicator" [ngClass]="'status-' + browserPermission"></div>
+          <div>
+            <span>Permissão do Navegador: </span>
+            <strong style="text-transform: uppercase;">{{ browserPermission }}</strong>
+          </div>
+        </div>
+
+        <button mat-flat-button class="permission-btn" 
+                *ngIf="browserPermission === 'default'" 
+                (click)="requestPermission()">
+          <mat-icon>notifications</mat-icon>
+          <span>Activar Notificações no Browser</span>
+        </button>
+
+        <div class="permission-granted-alert" *ngIf="browserPermission === 'granted'">
+          <mat-icon>check_circle</mat-icon>
+          <span>Excelente! Irá receber notificações reais nativas do seu sistema operativo.</span>
+        </div>
+      </div>
+
+      <div class="push-history">
+        <h5>Histórico de Alertas Push (PWA)</h5>
+        
+        <div class="empty-state" *ngIf="getPush().length === 0">
+          <mat-icon class="empty-icon">notification_important</mat-icon>
+          <p>Nenhuma notificação push enviada.</p>
+        </div>
+
+        <div class="push-notification-item" *ngFor="let p of getPush()">
+          <div class="push-item-icon">
+            <mat-icon>notifications</mat-icon>
+          </div>
+          <div class="push-item-content">
+            <div class="push-item-header">
+              <strong>{{ p.title }}</strong>
+              <small>{{ p.timestamp | date:'HH:mm' }}</small>
+            </div>
+            <p>{{ p.body }}</p>
+            <span class="recipient-tag">Destinatário: {{ p.userName }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>

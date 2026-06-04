@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
+import { NotificationService } from './notification.service';
 
 export type UserType = 'Produtor Individual' | 'Cooperativa' | 'Comprador' | 'Investidor';
 
@@ -26,6 +27,21 @@ export interface User {
   ultimoAcesso?: number;
   avatar?: string;
   descricao?: string;
+
+  // Modulo 8: Notificações e Comunicações (RF-58, RF-60)
+  email?: string;
+  notifSMS_otp?: boolean;
+  notifSMS_interesse?: boolean;
+  notifSMS_aceite?: boolean;
+  notifSMS_recusa?: boolean;
+  notifEmail_otp?: boolean;
+  notifEmail_interesse?: boolean;
+  notifEmail_aceite?: boolean;
+  notifEmail_recusa?: boolean;
+  notifPush_otp?: boolean;
+  notifPush_interesse?: boolean;
+  notifPush_aceite?: boolean;
+  notifPush_recusa?: boolean;
 }
 
 
@@ -63,7 +79,8 @@ export class AuthService {
       avatar: 'agriculture',
       ultimoLogin: Date.now(),
       ultimoAcesso: Date.now(),
-      status: 'Activo'
+      status: 'Activo',
+      email: 'mateus@alvorfield.co.mz'
     },
     {
       id: 2,
@@ -79,7 +96,8 @@ export class AuthService {
       avatar: 'shopping_basket',
       ultimoLogin: Date.now(),
       ultimoAcesso: Date.now(),
-      status: 'Activo'
+      status: 'Activo',
+      email: 'lucia@alvorfield.co.mz'
     },
     {
       id: 3,
@@ -94,7 +112,8 @@ export class AuthService {
       avatar: 'trending_up',
       ultimoLogin: Date.now(),
       ultimoAcesso: Date.now(),
-      status: 'Activo'
+      status: 'Activo',
+      email: 'info@agroinvest.co.mz'
     },
     {
       id: 4,
@@ -109,11 +128,15 @@ export class AuthService {
       ultimoLogin: Date.now(),
       ultimoAcesso: Date.now(),
       isAdmin: true,
-      status: 'Activo'
+      status: 'Activo',
+      email: 'admin@alvorfield.co.mz'
     }
   ];
 
-  constructor(private router: Router) {
+  constructor(
+    private router: Router,
+    private notificationService: NotificationService
+  ) {
     this.initializeData();
   }
 
@@ -138,10 +161,25 @@ export class AuthService {
           }
         }
         
-        // Garantir que todos os utilizadores existentes têm o campo status definido
+        // Garantir que todos os utilizadores existentes têm o campo status e preferências de notificação definidos
         users.forEach(u => {
           if (!u.status) {
             u.status = 'Activo';
+            updated = true;
+          }
+          if (u.notifSMS_otp === undefined) {
+            u.notifSMS_otp = true;
+            u.notifSMS_interesse = true;
+            u.notifSMS_aceite = true;
+            u.notifSMS_recusa = true;
+            u.notifEmail_otp = true;
+            u.notifEmail_interesse = true;
+            u.notifEmail_aceite = true;
+            u.notifEmail_recusa = true;
+            u.notifPush_otp = true;
+            u.notifPush_interesse = true;
+            u.notifPush_aceite = true;
+            u.notifPush_recusa = true;
             updated = true;
           }
         });
@@ -178,8 +216,21 @@ export class AuthService {
     
     this.otps.set(telefone, { codigo, expiresAt });
     
-    // Simulação do envio por SMS
-    console.info(`[SMS SIMULADO] Código OTP para ${telefone}: ${codigo} (Válido por 10 minutos)`);
+    // Obter utilizador se já existir (para recuperação de password)
+    const existing = this.getAllUsersWithDeleted().find(u => u.telefone === telefone);
+    const userId = existing ? existing.id : 0;
+    const userName = existing ? existing.nome : 'Novo Utilizador';
+    
+    // Acionar a notificação multicanal
+    const msg = `AlvorField: O seu codigo OTP de verificacao e ${codigo}. Valido por 10 minutos.`;
+    this.notificationService.sendNotification(
+      userId,
+      'otp',
+      'Código de Verificação OTP',
+      msg,
+      telefone,
+      userName
+    );
     
     return codigo;
   }
@@ -239,7 +290,19 @@ export class AuthService {
       ultimoLogin: Date.now(),
       ultimoAcesso: Date.now(),
       avatar: this.getDefaultAvatar(user.tipo),
-      status: 'Activo'
+      status: 'Activo',
+      notifSMS_otp: user.notifSMS_otp !== false,
+      notifSMS_interesse: user.notifSMS_interesse !== false,
+      notifSMS_aceite: user.notifSMS_aceite !== false,
+      notifSMS_recusa: user.notifSMS_recusa !== false,
+      notifEmail_otp: user.notifEmail_otp !== false,
+      notifEmail_interesse: user.notifEmail_interesse !== false,
+      notifEmail_aceite: user.notifEmail_aceite !== false,
+      notifEmail_recusa: user.notifEmail_recusa !== false,
+      notifPush_otp: user.notifPush_otp !== false,
+      notifPush_interesse: user.notifPush_interesse !== false,
+      notifPush_aceite: user.notifPush_aceite !== false,
+      notifPush_recusa: user.notifPush_recusa !== false
     };
 
     users.push(newUser);

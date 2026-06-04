@@ -13,6 +13,8 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 
 @Component({
   selector: 'app-profile',
@@ -27,6 +29,8 @@ import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
     MatButtonModule,
     MatIconModule,
     MatSnackBarModule,
+    MatSlideToggleModule,
+    MatCheckboxModule,
     FormsModule
   ],
   templateUrl: './profile.component.html',
@@ -77,6 +81,21 @@ export class ProfileComponent implements OnInit {
       provincia: ['', Validators.required],
       distrito: ['', Validators.required],
       descricao: ['', [Validators.required, Validators.maxLength(250)]],
+      email: ['', [Validators.email]],
+
+      // Preferências de Notificação (RF-60)
+      notifSMS_otp: [true],
+      notifSMS_interesse: [true],
+      notifSMS_aceite: [true],
+      notifSMS_recusa: [true],
+      notifEmail_otp: [true],
+      notifEmail_interesse: [true],
+      notifEmail_aceite: [true],
+      notifEmail_recusa: [true],
+      notifPush_otp: [true],
+      notifPush_interesse: [true],
+      notifPush_aceite: [true],
+      notifPush_recusa: [true],
 
       // Campos específicos condicionais
       areaCultivo: [null],
@@ -119,6 +138,19 @@ export class ProfileComponent implements OnInit {
       provincia: this.currentUser.provincia,
       distrito: this.currentUser.distrito,
       descricao: this.currentUser.descricao || '',
+      email: this.currentUser.email || '',
+      notifSMS_otp: this.currentUser.notifSMS_otp !== false,
+      notifSMS_interesse: this.currentUser.notifSMS_interesse !== false,
+      notifSMS_aceite: this.currentUser.notifSMS_aceite !== false,
+      notifSMS_recusa: this.currentUser.notifSMS_recusa !== false,
+      notifEmail_otp: this.currentUser.notifEmail_otp !== false,
+      notifEmail_interesse: this.currentUser.notifEmail_interesse !== false,
+      notifEmail_aceite: this.currentUser.notifEmail_aceite !== false,
+      notifEmail_recusa: this.currentUser.notifEmail_recusa !== false,
+      notifPush_otp: this.currentUser.notifPush_otp !== false,
+      notifPush_interesse: this.currentUser.notifPush_interesse !== false,
+      notifPush_aceite: this.currentUser.notifPush_aceite !== false,
+      notifPush_recusa: this.currentUser.notifPush_recusa !== false,
       areaCultivo: this.currentUser.areaCultivo,
       numMembros: this.currentUser.numMembros,
       nomeAssociacao: this.currentUser.nomeAssociacao || '',
@@ -180,7 +212,20 @@ export class ProfileComponent implements OnInit {
         nomeAssociacao: formVal.nomeAssociacao || undefined,
         tipoComprador: formVal.tipoComprador || undefined,
         produtosInteresse: formVal.produtosInteresse || undefined,
-        tipoInstituicao: formVal.tipoInstituicao || undefined
+        tipoInstituicao: formVal.tipoInstituicao || undefined,
+        email: formVal.email || '',
+        notifSMS_otp: formVal.notifSMS_otp,
+        notifSMS_interesse: formVal.notifSMS_interesse,
+        notifSMS_aceite: formVal.notifSMS_aceite,
+        notifSMS_recusa: formVal.notifSMS_recusa,
+        notifEmail_otp: formVal.notifEmail_otp,
+        notifEmail_interesse: formVal.notifEmail_interesse,
+        notifEmail_aceite: formVal.notifEmail_aceite,
+        notifEmail_recusa: formVal.notifEmail_recusa,
+        notifPush_otp: formVal.notifPush_otp,
+        notifPush_interesse: formVal.notifPush_interesse,
+        notifPush_aceite: formVal.notifPush_aceite,
+        notifPush_recusa: formVal.notifPush_recusa
       });
 
       this.isLoading = false;
