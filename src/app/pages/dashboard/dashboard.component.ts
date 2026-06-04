@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AuthService, User } from '../../services/auth.service';
+import { LocationService, Province } from '../../services/location.service';
+import { OfferService, Offer, OfferStatus } from '../../services/offer.service';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -32,15 +34,6 @@ interface PriceTicker {
   subiu: boolean;
 }
 
-interface ProdutorOffer {
-  id: number;
-  produto: string;
-  quantidade: string;
-  preco: string;
-  localidade: string;
-  status: string;
-}
-
 interface BuyerProposal {
   id: number;
   comprador: string;
@@ -48,17 +41,6 @@ interface BuyerProposal {
   quantidade: string;
   precoOferecido: string;
   status: 'Pendente' | 'Aceito' | 'Recusado';
-}
-
-interface AvailableOffer {
-  id: number;
-  produtor: string;
-  produto: string;
-  quantidade: string;
-  preco: string;
-  tipo: string;
-  provincia: string;
-  distrito: string;
 }
 
 interface PurchaseRequest {
@@ -113,6 +95,7 @@ interface InvestedProject {
   styleUrl: './dashboard.component.scss',
 })
 export class DashboardComponent implements OnInit {
+  protected readonly Math = Math;
   user: Omit<User, 'password'> | null = null;
   greeting = '';
 
@@ -121,15 +104,40 @@ export class DashboardComponent implements OnInit {
   showBidModal = false;
   showRequestModal = false;
   showInvestModal = false;
+  showDeleteConfirmModal = false;
+  offerToDeleteId: number | null = null;
 
-  // Inputs dos Formulários
-  newOffer = { produto: '', quantidade: '', preco: '', localidade: '' };
+  // Form de Oferta
+  newOffer = {
+    produto: '',
+    quantidade: null as number | null,
+    unidade: 'kg' as 'kg' | 'ton',
+    dataInicio: '',
+    dataFim: '',
+    precoUnitario: null as number | null,
+    provincia: '',
+    distrito: '',
+    latitude: undefined as number | undefined,
+    longitude: undefined as number | undefined,
+    fotos: [] as string[]
+  };
+  editingOfferId: number | null = null;
+
+  // Dropdown e localizações
+  productsList: string[] = [];
+  provincesList: Province[] = [];
+  districtsList: string[] = [];
+
+  // Geolocalização
+  loadingLocation = false;
+  locationDenied = false;
+
   newRequest = { produto: '', quantidade: '', precoMaximo: '' };
   newBid = { preco: '', quantidade: '' };
   investAmount = 50000;
 
   // Itens Selecionados para Modais
-  selectedOfferForBid: AvailableOffer | null = null;
+  selectedOfferForBid: Offer | null = null;
   selectedProjectForInvestment: InvestmentProject | null = null;
 
   // Busca e Filtros
@@ -182,11 +190,11 @@ export class DashboardComponent implements OnInit {
   ];
 
   // 1. Dados Específicos do Produtor
-  produtorOffers: ProdutorOffer[] = [];
+  produtorOffers: Offer[] = [];
   buyerProposals: BuyerProposal[] = [];
 
   // 2. Dados Específicos do Comprador
-  availableOffers: AvailableOffer[] = [];
+  availableOffers: Offer[] = [];
   myPurchaseRequests: PurchaseRequest[] = [];
 
   // 3. Dados Específicos do Investidor
@@ -197,6 +205,8 @@ export class DashboardComponent implements OnInit {
 
   constructor(
     private authService: AuthService,
+    private locationService: LocationService,
+    private offerService: OfferService,
     private router: Router,
     private snack: MatSnackBar
   ) {}
@@ -205,7 +215,10 @@ export class DashboardComponent implements OnInit {
     this.user = this.authService.getCurrentUser();
     this.setGreeting();
     this.setDashboardCards();
+    this.productsList = this.offerService.PREDEFINED_PRODUCTS;
+    this.provincesList = this.locationService.getProvinces();
     this.loadMockData();
+    this.loadOffers();
   }
 
   private setGreeting(): void {
@@ -303,28 +316,14 @@ export class DashboardComponent implements OnInit {
     const isInvestidor = this.user?.tipo === 'Investidor';
 
     if (isProdutor) {
-      const localOffers = localStorage.getItem('alvor_produtor_offers');
-      this.produtorOffers = localOffers ? JSON.parse(localOffers) : [
-        { id: 1, produto: 'Tomate Calibre A', quantidade: '2.5 Toneladas', preco: '45 MT/Kg', localidade: 'Bilene, Gaza', status: 'Ativo' },
-        { id: 2, produto: 'Cebola Vermelha', quantidade: '1.2 Toneladas', preco: '55 MT/Kg', localidade: 'Bilene, Gaza', status: 'Ativo' }
-      ];
-
       const localProposals = localStorage.getItem('alvor_buyer_proposals');
       this.buyerProposals = localProposals ? JSON.parse(localProposals) : [
-        { id: 1, comprador: 'Supermercados VIP', produto: 'Tomate Calibre A', quantidade: '2.0 Toneladas', precoOferecido: '42 MT/Kg', status: 'Pendente' },
+        { id: 1, comprador: 'Supermercados VIP', produto: 'Tomate', quantidade: '2.0 Toneladas', precoOferecido: '42 MT/Kg', status: 'Pendente' },
         { id: 2, comprador: 'Hotel Polana', produto: 'Cebola Vermelha', quantidade: '500 Kg', precoOferecido: '53 MT/Kg', status: 'Pendente' }
       ];
     }
 
     if (isComprador) {
-      const localMarket = localStorage.getItem('alvor_market_offers');
-      this.availableOffers = localMarket ? JSON.parse(localMarket) : [
-        { id: 1, produtor: 'Mateus Tembe', produto: 'Tomate Calibre A', quantidade: '2.5 Toneladas', preco: '45 MT/Kg', tipo: 'Orgânico', provincia: 'Gaza', distrito: 'Bilene' },
-        { id: 2, produtor: 'Cooperativa de Chókwè', produto: 'Milho Branco', quantidade: '15 Toneladas', preco: '24 MT/Kg', tipo: 'Familiar', provincia: 'Gaza', distrito: 'Chókwè' },
-        { id: 3, produtor: 'Machamba de Namaacha', produto: 'Alface e Hortelã', quantidade: '500 Kg', preco: '80 MT/Kg', tipo: 'Orgânico', provincia: 'Maputo', distrito: 'Namaacha' },
-        { id: 4, produtor: 'Associação Agro Nampula', produto: 'Castanha de Caju', quantidade: '8 Toneladas', preco: '120 MT/Kg', tipo: 'Comercial', provincia: 'Nampula', distrito: 'Meconta' }
-      ];
-
       const localRequests = localStorage.getItem('alvor_purchase_requests');
       this.myPurchaseRequests = localRequests ? JSON.parse(localRequests) : [
         { id: 1, produto: 'Batata Nacional', quantidade: '5 Toneladas', precoMaximo: '42 MT/Kg', status: 'Aberto', propostas: 3 },
@@ -347,6 +346,139 @@ export class DashboardComponent implements OnInit {
     }
   }
 
+  loadOffers(): void {
+    if (!this.user) return;
+    const isProdutor = this.user.tipo === 'Produtor Individual' || this.user.tipo === 'Cooperativa';
+    if (isProdutor) {
+      this.produtorOffers = this.offerService.getProducerOffers(this.user.id);
+    } else {
+      this.availableOffers = this.offerService.getPublicOffers();
+    }
+  }
+
+  onProvinceChange(): void {
+    if (this.newOffer.provincia) {
+      this.districtsList = this.locationService.getDistrictsForProvince(this.newOffer.provincia);
+      this.newOffer.distrito = ''; // Reset distrito
+    } else {
+      this.districtsList = [];
+    }
+  }
+
+  obterGeolocalizacao(): void {
+    if (!navigator.geolocation) {
+      this.snack.open('A geolocalização não é suportada por este dispositivo/browser.', 'OK', { duration: 3000 });
+      return;
+    }
+
+    this.loadingLocation = true;
+    this.locationDenied = false;
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        this.newOffer.latitude = Number(position.coords.latitude.toFixed(6));
+        this.newOffer.longitude = Number(position.coords.longitude.toFixed(6));
+        this.loadingLocation = false;
+        this.snack.open('Localização geográfica autodetectada com sucesso!', 'Excelente', {
+          duration: 3000,
+          panelClass: ['snackbar-success']
+        });
+      },
+      (error) => {
+        this.loadingLocation = false;
+        this.locationDenied = true;
+        this.snack.open('Permissão de localização negada ou indisponível. Seleccione no mapa manualmente.', 'OK', {
+          duration: 4000
+        });
+      },
+      { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+    );
+  }
+
+  selecionarCoordenadasMapa(lat: number, lng: number): void {
+    this.newOffer.latitude = lat;
+    this.newOffer.longitude = lng;
+    this.snack.open(`Coordenadas marcadas manualmente: Lat ${lat}, Lng ${lng}`, 'OK', { duration: 2500 });
+  }
+
+  handlePhotoUpload(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+
+    const files = Array.from(input.files);
+    
+    if (this.newOffer.fotos.length + files.length > 5) {
+      this.snack.open('O sistema permite adicionar até no máximo 5 fotos.', 'Erro', {
+        duration: 3000,
+        panelClass: ['snackbar-error']
+      });
+      return;
+    }
+
+    for (const file of files) {
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg'];
+      if (!allowedTypes.includes(file.type)) {
+        this.snack.open(`Formato de ficheiro inválido para ${file.name}. Use apenas JPG ou PNG.`, 'Erro', { duration: 3500 });
+        continue;
+      }
+
+      if (file.size > 5 * 1024 * 1024) {
+        this.snack.open(`O ficheiro ${file.name} ultrapassa o limite de 5MB por foto.`, 'Erro', { duration: 3500 });
+        continue;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e: any) => {
+        this.newOffer.fotos.push(e.target.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  removePhoto(index: number): void {
+    this.newOffer.fotos.splice(index, 1);
+  }
+
+  abrirModalNovaOferta(): void {
+    this.editingOfferId = null;
+    this.newOffer = {
+      produto: '',
+      quantidade: null,
+      unidade: 'kg',
+      dataInicio: '',
+      dataFim: '',
+      precoUnitario: null,
+      provincia: this.user?.provincia || '',
+      distrito: this.user?.distrito || '',
+      latitude: undefined,
+      longitude: undefined,
+      fotos: []
+    };
+    if (this.newOffer.provincia) {
+      this.districtsList = this.locationService.getDistrictsForProvince(this.newOffer.provincia);
+    }
+    this.showOfferModal = true;
+  }
+
+  abrirModalEditarOferta(offer: Offer): void {
+    this.editingOfferId = offer.id;
+    this.newOffer = {
+      produto: offer.produto,
+      quantidade: offer.quantidade,
+      unidade: offer.unidade,
+      dataInicio: offer.dataInicio,
+      dataFim: offer.dataFim,
+      precoUnitario: offer.precoUnitario,
+      provincia: offer.provincia,
+      distrito: offer.distrito,
+      latitude: offer.latitude,
+      longitude: offer.longitude,
+      fotos: [...offer.fotos]
+    };
+    this.districtsList = this.locationService.getDistrictsForProvince(offer.provincia);
+    this.showOfferModal = true;
+  }
+
   // Ações Gerais
   getUserTypeIcon(): string {
     const tipo = this.user?.tipo;
@@ -362,7 +494,7 @@ export class DashboardComponent implements OnInit {
 
   triggerAction(actionName: string): void {
     if (actionName === 'openOfferModal') {
-      this.showOfferModal = true;
+      this.abrirModalNovaOferta();
     } else if (actionName === 'openRequestModal') {
       this.showRequestModal = true;
     } else if (actionName === 'scrollToProposals') {
@@ -384,47 +516,114 @@ export class DashboardComponent implements OnInit {
   // ==========================================
   // 1. AÇÕES DO PRODUTOR
   // ==========================================
-  publishOffer(): void {
-    if (!this.newOffer.produto || !this.newOffer.quantidade || !this.newOffer.preco) {
-      this.snack.open('Por favor, preencha todos os campos obrigatórios.', 'OK', { duration: 3000, panelClass: ['snackbar-error'] });
+  publishOffer(isDraft = false): void {
+    if (
+      !this.newOffer.produto ||
+      this.newOffer.quantidade === null ||
+      this.newOffer.precoUnitario === null ||
+      !this.newOffer.dataInicio ||
+      !this.newOffer.dataFim ||
+      !this.newOffer.provincia ||
+      !this.newOffer.distrito
+    ) {
+      this.snack.open('Por favor, preencha todos os campos obrigatórios marcados.', 'OK', {
+        duration: 3000,
+        panelClass: ['snackbar-error']
+      });
       return;
     }
 
-    const offer: ProdutorOffer = {
-      id: Date.now(),
+    const start = new Date(this.newOffer.dataInicio);
+    const end = new Date(this.newOffer.dataFim);
+    if (end < start) {
+      this.snack.open('A data de fim não pode ser anterior à data de início.', 'Erro', { duration: 3000 });
+      return;
+    }
+
+    const offerData = {
       produto: this.newOffer.produto,
-      quantidade: this.newOffer.quantidade,
-      preco: this.newOffer.preco,
-      localidade: this.newOffer.localidade || `${this.user?.distrito}, ${this.user?.provincia}`,
-      status: 'Ativo'
+      quantidade: Number(this.newOffer.quantidade),
+      unidade: this.newOffer.unidade,
+      dataInicio: this.newOffer.dataInicio,
+      dataFim: this.newOffer.dataFim,
+      precoUnitario: Number(this.newOffer.precoUnitario),
+      provincia: this.newOffer.provincia,
+      distrito: this.newOffer.distrito,
+      latitude: this.newOffer.latitude,
+      longitude: this.newOffer.longitude,
+      fotos: this.newOffer.fotos,
+      estado: (isDraft ? 'Rascunho' : 'Activa') as OfferStatus
     };
 
-    this.produtorOffers.unshift(offer);
-    localStorage.setItem('alvor_produtor_offers', JSON.stringify(this.produtorOffers));
+    try {
+      if (this.editingOfferId) {
+        this.offerService.updateOffer(this.editingOfferId, offerData);
+        this.snack.open('Oferta de colheita actualizada com sucesso!', 'Excelente', {
+          duration: 3000,
+          panelClass: ['snackbar-success']
+        });
+      } else {
+        this.offerService.createOffer(offerData);
+        this.snack.open(
+          isDraft ? 'Oferta guardada como Rascunho com sucesso!' : 'Oferta de colheita publicada com sucesso!',
+          'Excelente',
+          {
+            duration: 3000,
+            panelClass: ['snackbar-success']
+          }
+        );
+      }
+    } catch (e: any) {
+      this.snack.open(e.message || 'Erro ao guardar oferta.', 'Erro', { duration: 3000 });
+      return;
+    }
 
-    // Adiciona também no mercado global simulado para que compradores vejam
-    const globalMarket = localStorage.getItem('alvor_market_offers');
-    const marketList: AvailableOffer[] = globalMarket ? JSON.parse(globalMarket) : [];
-    marketList.unshift({
-      id: offer.id,
-      produtor: this.user?.nome || 'Produtor local',
-      produto: offer.produto,
-      quantidade: offer.quantidade,
-      preco: offer.preco,
-      tipo: 'Familiar',
-      provincia: this.user?.provincia || 'Maputo',
-      distrito: this.user?.distrito || 'Namaacha'
-    });
-    localStorage.setItem('alvor_market_offers', JSON.stringify(marketList));
+    // Fechar modal e recarregar
+    this.showOfferModal = false;
+    this.editingOfferId = null;
+    this.loadOffers();
+  }
 
-    this.snack.open('Oferta de colheita publicada com sucesso!', 'Excelente', {
+  togglePauseOffer(id: number): void {
+    this.offerService.togglePauseOffer(id);
+    this.loadOffers();
+    const offer = this.produtorOffers.find(o => o.id === id);
+    if (offer) {
+      const msg = offer.estado === 'Pausada' ? 'Oferta pausada (oculta para compradores).' : 'Oferta reactivada com sucesso!';
+      this.snack.open(msg, 'OK', { duration: 3000, panelClass: ['snackbar-success'] });
+    }
+  }
+
+  deleteOffer(id: number): void {
+    this.offerToDeleteId = id;
+    this.showDeleteConfirmModal = true;
+  }
+
+  confirmDeleteOffer(): void {
+    if (this.offerToDeleteId !== null) {
+      this.offerService.deleteOffer(this.offerToDeleteId);
+      this.snack.open('Oferta removida com sucesso.', 'OK', {
+        duration: 3000,
+        panelClass: ['snackbar-success']
+      });
+      this.loadOffers();
+    }
+    this.showDeleteConfirmModal = false;
+    this.offerToDeleteId = null;
+  }
+
+  cancelDeleteOffer(): void {
+    this.showDeleteConfirmModal = false;
+    this.offerToDeleteId = null;
+  }
+
+  markAsCompleted(id: number): void {
+    this.offerService.markAsCompleted(id);
+    this.snack.open('Oferta marcada como Vendida/Concluída manualmente.', 'Excelente', {
       duration: 3000,
       panelClass: ['snackbar-success']
     });
-
-    // Reset form e fechar modal
-    this.newOffer = { produto: '', quantidade: '', preco: '', localidade: '' };
-    this.showOfferModal = false;
+    this.loadOffers();
   }
 
   acceptProposal(proposal: BuyerProposal): void {
@@ -457,26 +656,27 @@ export class DashboardComponent implements OnInit {
   // ==========================================
   // 2. AÇÕES DO COMPRADOR
   // ==========================================
-  get filteredOffers(): AvailableOffer[] {
+  get filteredOffers(): Offer[] {
     return this.availableOffers.filter(offer => {
-      const matchSearch = offer.produto.toLowerCase().includes(this.searchQuery.toLowerCase()) || 
-                          offer.produtor.toLowerCase().includes(this.searchQuery.toLowerCase());
+      const matchSearch =
+        offer.produto.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
+        offer.produtorNome.toLowerCase().includes(this.searchQuery.toLowerCase());
       const matchProv = this.selectedProvince === 'Todas' || offer.provincia === this.selectedProvince;
       return matchSearch && matchProv;
     });
   }
 
-  openBidModal(offer: AvailableOffer): void {
+  openBidModal(offer: Offer): void {
     this.selectedOfferForBid = offer;
-    this.newBid.preco = offer.preco.replace(' MT/Kg', '').replace(' MT', '');
-    this.newBid.quantidade = offer.quantidade;
+    this.newBid.preco = String(offer.precoUnitario);
+    this.newBid.quantidade = `${offer.quantidade} ${offer.unidade}`;
     this.showBidModal = true;
   }
 
   submitBid(): void {
     if (!this.selectedOfferForBid || !this.newBid.preco || !this.newBid.quantidade) return;
 
-    this.snack.open(`Proposta de ${this.newBid.preco} MT/Kg para ${this.selectedOfferForBid.produtor} enviada!`, 'Sucesso', {
+    this.snack.open(`Proposta de ${this.newBid.preco} MT/Kg para ${this.selectedOfferForBid.produtorNome} enviada!`, 'Sucesso', {
       duration: 3500,
       panelClass: ['snackbar-success']
     });

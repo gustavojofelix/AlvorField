@@ -173,7 +173,7 @@
         <div class="section-container" id="ofertas-seccao">
           <div class="section-header">
             <h3><mat-icon>agriculture</mat-icon> Minhas Ofertas de Colheita</h3>
-            <button mat-flat-button color="primary" (click)="showOfferModal = true">
+            <button mat-flat-button color="primary" (click)="abrirModalNovaOferta()">
               <mat-icon>add</mat-icon> Nova Oferta
             </button>
           </div>
@@ -182,7 +182,7 @@
             @if (produtorOffers.length === 0) {
               <div class="empty-state">
                 <mat-icon>inventory_2</mat-icon>
-                <p>Nenhuma oferta registrada. Publique sua colheita para os compradores.</p>
+                <p>Nenhuma oferta registada. Publique a sua colheita para os compradores.</p>
               </div>
             } @else {
               <div class="grid-table">
@@ -190,20 +190,56 @@
                   <div class="table-row">
                     <div class="row-main">
                       <h4 class="product-name">{{ offer.produto }}</h4>
-                      <span class="product-loc"><mat-icon>place</mat-icon> {{ offer.localidade }}</span>
+                      <span class="product-loc">
+                        <mat-icon>place</mat-icon> 
+                        {{ offer.distrito }}, {{ offer.provincia }}
+                        <span class="coordenadas-tag" *ngIf="offer.latitude" style="font-size: 0.8rem; color: #888; margin-left: 6px;">
+                          ({{ offer.latitude }}, {{ offer.longitude }})
+                        </span>
+                      </span>
+                      <span class="date-range-badge" style="display: flex; align-items: center; gap: 4px; font-size: 0.8rem; color: #666; margin-top: 4px;">
+                        <mat-icon style="font-size: 14px; width: 14px; height: 14px;">calendar_today</mat-icon>
+                        {{ offer.dataInicio | date:'dd/MM/yyyy' }} a {{ offer.dataFim | date:'dd/MM/yyyy' }}
+                      </span>
                     </div>
                     <div class="row-stats">
                       <div class="stat-unit">
                         <span class="lbl">Preço</span>
-                        <strong class="val">{{ offer.preco }}</strong>
+                        <strong class="val" style="color: #2E7D32;">{{ offer.precoUnitario }} MZN/{{ offer.unidade }}</strong>
                       </div>
                       <div class="stat-unit">
                         <span class="lbl">Quantidade</span>
-                        <strong class="val">{{ offer.quantidade }}</strong>
+                        <strong class="val">{{ offer.quantidade }} {{ offer.unidade }}</strong>
                       </div>
                     </div>
-                    <div class="row-actions">
-                      <span class="badge active">{{ offer.status }}</span>
+                    
+                    <!-- Estado & Ações Rápidas -->
+                    <div class="row-actions" style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
+                      <span class="badge" [ngClass]="offer.estado.toLowerCase()">
+                        {{ offer.estado }}
+                      </span>
+                      <div class="action-buttons-group" style="display: flex; gap: 4px;">
+                        <button mat-icon-button color="primary" title="Editar Oferta" 
+                                *ngIf="offer.estado === 'Activa' || offer.estado === 'Pausada' || offer.estado === 'Rascunho'" 
+                                (click)="abrirModalEditarOferta(offer)">
+                          <mat-icon>edit</mat-icon>
+                        </button>
+                        <button mat-icon-button color="accent" 
+                                [title]="offer.estado === 'Activa' ? 'Pausar Oferta' : 'Reactivar Oferta'"
+                                *ngIf="offer.estado === 'Activa' || offer.estado === 'Pausada'"
+                                (click)="togglePauseOffer(offer.id)">
+                          <mat-icon>{{ offer.estado === 'Activa' ? 'pause_circle' : 'play_circle' }}</mat-icon>
+                        </button>
+                        <button mat-icon-button style="color: #2e7d32;" title="Marcar como Vendida"
+                                *ngIf="offer.estado === 'Activa' || offer.estado === 'Pausada'"
+                                (click)="markAsCompleted(offer.id)">
+                          <mat-icon>check_circle</mat-icon>
+                        </button>
+                        <button mat-icon-button color="warn" title="Eliminar Permanentemente"
+                                (click)="deleteOffer(offer.id)">
+                          <mat-icon>delete</mat-icon>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 }
@@ -293,10 +329,10 @@
                 <div class="market-offer-card">
                   <div class="offer-header">
                     <div>
-                      <span class="offer-produtor">{{ offer.produtor }}</span>
+                      <span class="offer-produtor">{{ offer.produtorNome }}</span>
                       <span class="offer-location"><mat-icon>place</mat-icon> {{ offer.distrito }}, {{ offer.provincia }}</span>
                     </div>
-                    <span class="offer-tag" [ngClass]="offer.tipo.toLowerCase()">{{ offer.tipo }}</span>
+                    <span class="offer-tag activa">{{ offer.estado }}</span>
                   </div>
 
                   <h4 class="offer-title">{{ offer.produto }}</h4>
@@ -304,11 +340,11 @@
                   <div class="offer-specs">
                     <div class="spec">
                       <span class="lbl">Disponível</span>
-                      <strong class="val">{{ offer.quantidade }}</strong>
+                      <strong class="val">{{ offer.quantidade }} {{ offer.unidade }}</strong>
                     </div>
                     <div class="spec">
                       <span class="lbl">Preço base</span>
-                      <strong class="val">{{ offer.preco }}</strong>
+                      <strong class="val">{{ offer.precoUnitario }} MZN/{{ offer.unidade }}</strong>
                     </div>
                   </div>
 
@@ -522,44 +558,164 @@
   </div>
 
   <!-- ========================================================== -->
-  <!-- MODAL 1: PRODUTOR - REGISTRAR/PUBLICAR OFERTA DE COLHEITA -->
+  <!-- MODAL 1: PRODUTOR - REGISTRAR/PUBLICAR OU EDITAR OFERTA DE COLHEITA -->
   <!-- ========================================================== -->
   <div class="modal-overlay" *ngIf="showOfferModal">
-    <div class="modal-card">
+    <div class="modal-card" style="max-width: 650px; width: 90%; max-height: 90vh; overflow-y: auto;">
       <div class="modal-header">
-        <h3><mat-icon>agriculture</mat-icon> Publicar Oferta de Colheita</h3>
+        <h3>
+          <mat-icon>agriculture</mat-icon> 
+          {{ editingOfferId ? 'Editar Oferta de Colheita' : 'Publicar Oferta de Colheita' }}
+        </h3>
         <button class="close-btn" (click)="showOfferModal = false"><mat-icon>close</mat-icon></button>
       </div>
 
       <div class="modal-body">
-        <p class="modal-desc">Sua oferta ficará visível para todos os compradores autorizados do AlvorField.</p>
+        <p class="modal-desc" style="margin-bottom: 20px; font-size: 0.9rem; color: #666;">
+          {{ editingOfferId ? 'Actualize os detalhes da sua oferta de produção.' : 'Registe a sua colheita para receber propostas de compradores autorizados.' }}
+        </p>
         
-        <div class="form-group">
-          <label>Produto / Cultura</label>
-          <input type="text" [(ngModel)]="newOffer.produto" placeholder="Ex: Tomate Calibre A, Milho Branco">
+        <!-- Produto -->
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label style="font-weight: 600; display: block; margin-bottom: 6px; font-size: 0.85rem;">Produto / Cultura *</label>
+          <select class="custom-select" [(ngModel)]="newOffer.produto" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; background: #fff;">
+            <option value="" disabled selected>Seleccione um produto...</option>
+            @for (prod of productsList; track prod) {
+              <option [value]="prod">{{ prod }}</option>
+            }
+          </select>
         </div>
 
-        <div class="form-row">
+        <!-- Quantidade e Unidade -->
+        <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
           <div class="form-group">
-            <label>Quantidade Disponível</label>
-            <input type="text" [(ngModel)]="newOffer.quantidade" placeholder="Ex: 2.5 Toneladas, 800 Kg">
+            <label style="font-weight: 600; display: block; margin-bottom: 6px; font-size: 0.85rem;">Quantidade Disponível *</label>
+            <input type="number" [(ngModel)]="newOffer.quantidade" placeholder="Ex: 2.5, 800" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; box-sizing: border-box;">
           </div>
 
           <div class="form-group">
-            <label>Preço Sugerido (MT/Kg)</label>
-            <input type="text" [(ngModel)]="newOffer.preco" placeholder="Ex: 45 MT/Kg">
+            <label style="font-weight: 600; display: block; margin-bottom: 6px; font-size: 0.85rem;">Unidade *</label>
+            <select class="custom-select" [(ngModel)]="newOffer.unidade" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; background: #fff;">
+              <option value="kg">Quilogramas (kg)</option>
+              <option value="ton">Toneladas (ton)</option>
+            </select>
           </div>
         </div>
 
-        <div class="form-group">
-          <label>Localidade de Retirada (Opcional)</label>
-          <input type="text" [(ngModel)]="newOffer.localidade" placeholder="Ex: Machamba Bilene, Gaza">
+        <!-- Preço Unitário -->
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label style="font-weight: 600; display: block; margin-bottom: 6px; font-size: 0.85rem;">Preço por Unidade (MZN) *</label>
+          <input type="number" [(ngModel)]="newOffer.precoUnitario" placeholder="Ex: 45 (MZN/kg ou MZN/ton)" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; box-sizing: border-box;">
         </div>
+
+        <!-- Datas de Disponibilidade -->
+        <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+          <div class="form-group">
+            <label style="font-weight: 600; display: block; margin-bottom: 6px; font-size: 0.85rem;">Disponível A Partir De *</label>
+            <input type="date" [(ngModel)]="newOffer.dataInicio" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; box-sizing: border-box;">
+          </div>
+
+          <div class="form-group">
+            <label style="font-weight: 600; display: block; margin-bottom: 6px; font-size: 0.85rem;">Disponível Até *</label>
+            <input type="date" [(ngModel)]="newOffer.dataFim" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; box-sizing: border-box;">
+          </div>
+        </div>
+
+        <!-- Província e Distrito -->
+        <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+          <div class="form-group">
+            <label style="font-weight: 600; display: block; margin-bottom: 6px; font-size: 0.85rem;">Província *</label>
+            <select class="custom-select" [(ngModel)]="newOffer.provincia" (change)="onProvinceChange()" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; background: #fff;">
+              <option value="" disabled selected>Seleccione a província...</option>
+              @for (prov of provincesList; track prov.nome) {
+                <option [value]="prov.nome">{{ prov.nome }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label style="font-weight: 600; display: block; margin-bottom: 6px; font-size: 0.85rem;">Distrito *</label>
+            <select class="custom-select" [(ngModel)]="newOffer.distrito" [disabled]="!newOffer.provincia" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; background: #fff;">
+              <option value="" disabled selected>Seleccione o distrito...</option>
+              @for (dist of districtsList; track dist) {
+                <option [value]="dist">{{ dist }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <!-- Geolocalização & Mapa Interativo -->
+        <div class="form-group" style="margin-bottom: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <label style="font-weight: 600; font-size: 0.85rem;">Localização Geográfica (Machamba)</label>
+            <button mat-stroked-button color="primary" type="button" (click)="obterGeolocalizacao()" [disabled]="loadingLocation" style="height: 36px;">
+              <mat-icon *ngIf="!loadingLocation">my_location</mat-icon>
+              <span *ngIf="!loadingLocation">Autodetectar</span>
+              <span *ngIf="loadingLocation">A carregar...</span>
+            </button>
+          </div>
+
+          <!-- Coordenadas atuais -->
+          <div style="background: #f5f5f5; padding: 10px; border-radius: 8px; display: flex; gap: 16px; margin-bottom: 10px; font-size: 0.85rem; color: #555;">
+            <span>Latitude: <strong>{{ newOffer.latitude !== undefined ? newOffer.latitude : 'Não definida' }}</strong></span>
+            <span>Longitude: <strong>{{ newOffer.longitude !== undefined ? newOffer.longitude : 'Não definida' }}</strong></span>
+          </div>
+
+          <!-- Simulador de Mapa Clique-e-Marque -->
+          <div style="margin-bottom: 10px;">
+            <span style="font-size: 0.8rem; color: #666; display: block; margin-bottom: 6px;">Clique em qualquer ponto do terreno abaixo para posicionar o marcador da machamba:</span>
+            
+            <div class="map-grid-simulator" style="position: relative; height: 180px; background: #e0f2f1; border: 1px solid #b2dfdb; border-radius: 8px; overflow: hidden; cursor: crosshair; display: flex; align-items: center; justify-content: center;"
+                 (click)="selecionarCoordenadasMapa(-25.2635 + Math.random()*0.1, 33.2425 + Math.random()*0.1)">
+              
+              <!-- Fundo de Mapa Terrestre mock -->
+              <div style="position: absolute; inset: 0; background: radial-gradient(circle at 30% 20%, #a5d6a7 10%, transparent 40%), radial-gradient(circle at 80% 70%, #81c784 20%, transparent 60%); opacity: 0.7;"></div>
+              
+              <!-- Linhas de Grelha -->
+              <div style="position: absolute; inset: 0; background-size: 20px 20px; background-image: linear-gradient(to right, rgba(0,105,92,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0,105,92,0.05) 1px, transparent 1px);"></div>
+              
+              <!-- Marcador Visual -->
+              <div *ngIf="newOffer.latitude" style="position: absolute; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; transform: translate(-50%, -100%); left: 50%; top: 50%;">
+                <mat-icon style="color: #d32f2f; font-size: 32px; width: 32px; height: 32px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">place</mat-icon>
+                <div style="background: rgba(0,0,0,0.8); color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; white-space: nowrap; margin-top: -2px;">Marcador</div>
+              </div>
+
+              <div *ngIf="!newOffer.latitude" style="color: #00796b; font-size: 0.85rem; font-weight: 500; text-align: center; padding: 20px; z-index: 2; pointer-events: none; background: rgba(255,255,255,0.8); border-radius: 8px;">
+                <mat-icon style="vertical-align: middle; margin-right: 4px;">map</mat-icon>
+                Clique aqui para colocar o marcador no terreno da machamba
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Upload de Fotos -->
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label style="font-weight: 600; display: block; margin-bottom: 6px; font-size: 0.85rem;">Fotos do Produto / Machamba (Até 5 fotos - JPG/PNG - Máx. 5MB cada) *</label>
+          <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 10px;">
+            <button mat-stroked-button type="button" (click)="fileInput.click()" style="height: 38px;">
+              <mat-icon>add_a_photo</mat-icon> Adicionar Fotos
+            </button>
+            <input type="file" #fileInput (change)="handlePhotoUpload($event)" multiple accept="image/png, image/jpeg, image/jpg" style="display: none;">
+            <span style="font-size: 0.8rem; color: #666;">{{ newOffer.fotos.length }} de 5 fotos carregadas</span>
+          </div>
+
+          <!-- Miniaturas / Thumbnails -->
+          <div class="photos-thumbnails-grid" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px;" *ngIf="newOffer.fotos.length > 0">
+            <div *ngFor="let foto of newOffer.fotos; let idx = index" style="position: relative; border-radius: 8px; overflow: hidden; aspect-ratio: 1; border: 1px solid #ccc; background: #eee; display: flex; align-items: center; justify-content: center;">
+              <img [src]="foto" style="width: 100%; height: 100%; object-fit: cover;">
+              <button type="button" (click)="removePhoto(idx)" style="position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.6); color: #fff; border: none; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;">
+                <mat-icon style="font-size: 14px; width: 14px; height: 14px;">close</mat-icon>
+              </button>
+            </div>
+          </div>
+        </div>
+
       </div>
 
-      <div class="modal-footer">
-        <button mat-button class="btn-cancel" (click)="showOfferModal = false">Cancelar</button>
-        <button mat-flat-button color="primary" class="btn-submit" (click)="publishOffer()">Publicar Oferta</button>
+      <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 12px; border-top: 1px solid #eee; padding-top: 16px; margin-top: 20px;">
+        <button mat-button class="btn-cancel" (click)="showOfferModal = false" style="padding: 8px 16px;">Cancelar</button>
+        <button mat-stroked-button color="primary" class="btn-draft" (click)="publishOffer(true)" style="padding: 8px 16px;">Guardar como Rascunho</button>
+        <button mat-flat-button color="primary" class="btn-submit" (click)="publishOffer(false)" style="padding: 8px 16px;">Publicar Oferta</button>
       </div>
     </div>
   </div>
@@ -575,11 +731,11 @@
       </div>
 
       <div class="modal-body" *ngIf="selectedOfferForBid">
-        <p class="modal-desc">Negocie direto com <strong>{{ selectedOfferForBid.produtor }}</strong> para a cultura de <strong>{{ selectedOfferForBid.produto }}</strong>.</p>
+        <p class="modal-desc">Negocie direto com <strong>{{ selectedOfferForBid.produtorNome }}</strong> para a cultura de <strong>{{ selectedOfferForBid.produto }}</strong>.</p>
         
         <div class="offer-summary-box">
-          <div><span>Disponível:</span> <strong>{{ selectedOfferForBid.quantidade }}</strong></div>
-          <div><span>Preço base:</span> <strong>{{ selectedOfferForBid.preco }}</strong></div>
+          <div><span>Disponível:</span> <strong>{{ selectedOfferForBid.quantidade }} {{ selectedOfferForBid.unidade }}</strong></div>
+          <div><span>Preço base:</span> <strong>{{ selectedOfferForBid.precoUnitario }} MZN/{{ selectedOfferForBid.unidade }}</strong></div>
         </div>
 
         <div class="form-group">
@@ -667,6 +823,25 @@
       <div class="modal-footer">
         <button mat-button class="btn-cancel" (click)="showInvestModal = false">Cancelar</button>
         <button mat-flat-button color="primary" class="btn-submit" (click)="submitInvestment()">Confirmar Aporte</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================== -->
+  <!-- MODAL DE CONFIRMAÇÃO DE EXCLUSÃO CUSTOMIZADO -->
+  <!-- ========================================================== -->
+  <div class="modal-overlay" *ngIf="showDeleteConfirmModal">
+    <div class="modal-card" style="max-width: 450px; width: 90%; text-align: center; padding: 24px; border-radius: 16px;">
+      <div style="margin-bottom: 16px;">
+        <mat-icon style="font-size: 56px; width: 56px; height: 56px; color: #c62828; margin: 0 auto; display: block;">warning</mat-icon>
+      </div>
+      <h3 style="font-size: 1.25rem; font-weight: 800; color: #0f172a; margin-bottom: 8px;">Confirmar Eliminação</h3>
+      <p style="font-size: 0.9rem; color: #64748b; margin-bottom: 24px; line-height: 1.5; padding: 0 10px;">
+        Tem a certeza de que deseja eliminar permanentemente esta oferta? Esta acção não poderá ser desfeita e a oferta deixará de estar visível para os compradores.
+      </p>
+      <div style="display: flex; gap: 12px; justify-content: center;">
+        <button mat-button class="btn-cancel" (click)="cancelDeleteOffer()" style="padding: 8px 20px; font-weight: 700; border-radius: 8px;">Não, Cancelar</button>
+        <button mat-flat-button color="warn" (click)="confirmDeleteOffer()" style="padding: 8px 20px; font-weight: 700; background-color: #c62828; border-radius: 8px;">Sim, Eliminar</button>
       </div>
     </div>
   </div>

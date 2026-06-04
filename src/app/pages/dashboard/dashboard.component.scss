@@ -725,10 +725,28 @@
         font-weight: 700;
         padding: 4px 10px;
         border-radius: 20px;
+        text-transform: uppercase;
+        display: inline-block;
 
-        &.active {
+        &.activa {
           background: #e8f5e9;
           color: #2e7d32;
+        }
+        &.pausada {
+          background: #fff3e0;
+          color: #e65100;
+        }
+        &.expirada {
+          background: #ffebee;
+          color: #c62828;
+        }
+        &.concluída {
+          background: #e3f2fd;
+          color: #1565c0;
+        }
+        &.rascunho {
+          background: #f1f5f9;
+          color: #475569;
         }
       }
     }
