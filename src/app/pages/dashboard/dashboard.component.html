@@ -21,7 +21,6 @@
         </div>
       </div>
       
-      <!-- RF-11: Exibição dos timestamps de auditoria -->
       <div class="user-meta-times">
         <div class="time-item">
           <mat-icon>login</mat-icon>
@@ -42,16 +41,104 @@
     </div>
   </div>
 
+  <!-- KPIs / Estatísticas Principais (Role-Specific) -->
+  <div class="kpis-container animate-fade-in">
+    <!-- PRODUTOR KPIs -->
+    @if (user?.tipo === 'Produtor Individual' || user?.tipo === 'Cooperativa') {
+      <div class="kpi-card">
+        <div class="kpi-icon-bubble green"><mat-icon>payments</mat-icon></div>
+        <div class="kpi-data">
+          <span class="kpi-label">Vendas do Mês</span>
+          <h3 class="kpi-value">124.500 MT</h3>
+          <span class="kpi-trend positive"><mat-icon>arrow_upward</mat-icon> +12% vs. mês ant.</span>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon-bubble orange"><mat-icon>local_offer</mat-icon></div>
+        <div class="kpi-data">
+          <span class="kpi-label">Ofertas Ativas</span>
+          <h3 class="kpi-value">{{ produtorOffers.length }}</h3>
+          <span class="kpi-trend neutro">Prontas para venda</span>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon-bubble blue"><mat-icon>forum</mat-icon></div>
+        <div class="kpi-data">
+          <span class="kpi-label">Negociações Abertas</span>
+          <h3 class="kpi-value">{{ buyerProposals.length }}</h3>
+          <span class="kpi-trend positive">2 novas propostas</span>
+        </div>
+      </div>
+    }
+
+    <!-- COMPRADOR KPIs -->
+    @if (user?.tipo === 'Comprador') {
+      <div class="kpi-card">
+        <div class="kpi-icon-bubble orange"><mat-icon>shopping_cart</mat-icon></div>
+        <div class="kpi-data">
+          <span class="kpi-label">Total Adquirido</span>
+          <h3 class="kpi-value">340.000 MT</h3>
+          <span class="kpi-trend positive"><mat-icon>arrow_upward</mat-icon> 18.5 Toneladas</span>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon-bubble green"><mat-icon>contact_page</mat-icon></div>
+        <div class="kpi-data">
+          <span class="kpi-label">Cotações Abertas</span>
+          <h3 class="kpi-value">{{ myPurchaseRequests.length }}</h3>
+          <span class="kpi-trend active">Aguardando lances</span>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon-bubble blue"><mat-icon>groups</mat-icon></div>
+        <div class="kpi-data">
+          <span class="kpi-label">Produtores Parceiros</span>
+          <h3 class="kpi-value">8</h3>
+          <span class="kpi-trend positive">2 novos este mês</span>
+        </div>
+      </div>
+    }
+
+    <!-- INVESTIDOR KPIs -->
+    @if (user?.tipo === 'Investidor') {
+      <div class="kpi-card">
+        <div class="kpi-icon-bubble blue"><mat-icon>account_balance</mat-icon></div>
+        <div class="kpi-data">
+          <span class="kpi-label">Capital Alocado</span>
+          <h3 class="kpi-value">650.000 MT</h3>
+          <span class="kpi-trend positive">Disponível: 350.000 MT</span>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon-bubble green"><mat-icon>trending_up</mat-icon></div>
+        <div class="kpi-data">
+          <span class="kpi-label">Retorno Médio</span>
+          <h3 class="kpi-value">+14.2%</h3>
+          <span class="kpi-trend positive">Acima da média SIMA</span>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon-bubble purple"><mat-icon>assignment_turned_in</mat-icon></div>
+        <div class="kpi-data">
+          <span class="kpi-label">Projetos Financiados</span>
+          <h3 class="kpi-value">{{ investedProjects.length }}</h3>
+          <span class="kpi-trend active">Cultura em progresso</span>
+        </div>
+      </div>
+    }
+  </div>
+
   <!-- Duas Colunas de Conteúdo -->
   <div class="dashboard-content-layout">
     
-    <!-- Coluna Esquerda: Ações AgriTech de Acordo com Perfil -->
+    <!-- Coluna Esquerda: Ações e Painéis Interativos -->
     <div class="left-actions-col">
       <h2 class="column-title">
         <mat-icon>apps</mat-icon>
         Painel de Ferramentas AgriTech
       </h2>
 
+      <!-- Grid de Ações Rápidas -->
       <div class="action-cards-grid">
         @for (card of dashboardCards; track card.title) {
           <mat-card class="action-card" (click)="triggerAction(card.action)">
@@ -72,16 +159,291 @@
 
             <mat-card-actions>
               <button mat-flat-button [style.background]="card.color" class="action-btn">
-                {{ card.action }}
+                {{ card.action.startsWith('open') ? 'Abrir formulário' : 'Visualizar' }}
                 <mat-icon>arrow_forward</mat-icon>
               </button>
             </mat-card-actions>
           </mat-card>
         }
       </div>
+
+      <!-- SEÇÃO EXCLUSIVA: PRODUTOR (Gerenciamento de Ofertas e Propostas) -->
+      @if (user?.tipo === 'Produtor Individual' || user?.tipo === 'Cooperativa') {
+        <!-- Minhas Ofertas Ativas -->
+        <div class="section-container" id="ofertas-seccao">
+          <div class="section-header">
+            <h3><mat-icon>agriculture</mat-icon> Minhas Ofertas de Colheita</h3>
+            <button mat-flat-button color="primary" (click)="showOfferModal = true">
+              <mat-icon>add</mat-icon> Nova Oferta
+            </button>
+          </div>
+
+          <div class="offers-table-card">
+            @if (produtorOffers.length === 0) {
+              <div class="empty-state">
+                <mat-icon>inventory_2</mat-icon>
+                <p>Nenhuma oferta registrada. Publique sua colheita para os compradores.</p>
+              </div>
+            } @else {
+              <div class="grid-table">
+                @for (offer of produtorOffers; track offer.id) {
+                  <div class="table-row">
+                    <div class="row-main">
+                      <h4 class="product-name">{{ offer.produto }}</h4>
+                      <span class="product-loc"><mat-icon>place</mat-icon> {{ offer.localidade }}</span>
+                    </div>
+                    <div class="row-stats">
+                      <div class="stat-unit">
+                        <span class="lbl">Preço</span>
+                        <strong class="val">{{ offer.preco }}</strong>
+                      </div>
+                      <div class="stat-unit">
+                        <span class="lbl">Quantidade</span>
+                        <strong class="val">{{ offer.quantidade }}</strong>
+                      </div>
+                    </div>
+                    <div class="row-actions">
+                      <span class="badge active">{{ offer.status }}</span>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- Propostas Recebidas de Compradores -->
+        <div class="section-container" id="propostas-seccao">
+          <div class="section-header">
+            <h3><mat-icon>handshake</mat-icon> Propostas de Compradores</h3>
+          </div>
+
+          <div class="offers-table-card">
+            @if (buyerProposals.length === 0) {
+              <div class="empty-state">
+                <mat-icon>mail_outline</mat-icon>
+                <p>Sem propostas no momento. Ofertas ativas atrairão compradores em breve!</p>
+              </div>
+            } @else {
+              <div class="proposals-list">
+                @for (prop of buyerProposals; track prop.id) {
+                  <div class="proposal-card-item" [ngClass]="prop.status.toLowerCase()">
+                    <div class="prop-top">
+                      <div>
+                        <h4>{{ prop.comprador }}</h4>
+                        <p class="prop-sub">Interessado em: <strong>{{ prop.produto }}</strong></p>
+                      </div>
+                      <span class="prop-status" [ngClass]="prop.status.toLowerCase()">{{ prop.status }}</span>
+                    </div>
+                    
+                    <div class="prop-details">
+                      <div class="detail-item">
+                        <span>Quantidade Pedida</span>
+                        <strong>{{ prop.quantidade }}</strong>
+                      </div>
+                      <div class="detail-item">
+                        <span>Preço Oferecido</span>
+                        <strong>{{ prop.precoOferecido }}</strong>
+                      </div>
+                    </div>
+
+                    @if (prop.status === 'Pendente') {
+                      <div class="prop-actions">
+                        <button mat-stroked-button color="warn" (click)="declineProposal(prop)">Recusar</button>
+                        <button mat-flat-button color="primary" (click)="acceptProposal(prop)">Aceitar Negócio</button>
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- SEÇÃO EXCLUSIVA: COMPRADOR (Mercado Aberto e Pedidos de Cotação) -->
+      @if (user?.tipo === 'Comprador') {
+        <!-- Mercado Aberto -->
+        <div class="section-container" id="mercado-seccao">
+          <div class="section-header-filters">
+            <h3><mat-icon>travel_explore</mat-icon> Pesquisar Produtores Locais</h3>
+            
+            <div class="filters-row">
+              <div class="search-input-wrapper">
+                <mat-icon>search</mat-icon>
+                <input type="text" [(ngModel)]="searchQuery" placeholder="Procurar tomate, milho, produtor...">
+              </div>
+
+              <select class="custom-select" [(ngModel)]="selectedProvince">
+                @for (prov of provincias; track prov) {
+                  <option [value]="prov">{{ prov }}</option>
+                }
+              </select>
+            </div>
+          </div>
+
+          <div class="market-offers-grid">
+            @if (filteredOffers.length === 0) {
+              <div class="empty-state">
+                <mat-icon>search_off</mat-icon>
+                <p>Nenhuma oferta encontrada para os filtros aplicados.</p>
+              </div>
+            } @else {
+              @for (offer of filteredOffers; track offer.id) {
+                <div class="market-offer-card">
+                  <div class="offer-header">
+                    <div>
+                      <span class="offer-produtor">{{ offer.produtor }}</span>
+                      <span class="offer-location"><mat-icon>place</mat-icon> {{ offer.distrito }}, {{ offer.provincia }}</span>
+                    </div>
+                    <span class="offer-tag" [ngClass]="offer.tipo.toLowerCase()">{{ offer.tipo }}</span>
+                  </div>
+
+                  <h4 class="offer-title">{{ offer.produto }}</h4>
+
+                  <div class="offer-specs">
+                    <div class="spec">
+                      <span class="lbl">Disponível</span>
+                      <strong class="val">{{ offer.quantidade }}</strong>
+                    </div>
+                    <div class="spec">
+                      <span class="lbl">Preço base</span>
+                      <strong class="val">{{ offer.preco }}</strong>
+                    </div>
+                  </div>
+
+                  <button mat-flat-button color="primary" class="proposal-btn" (click)="openBidModal(offer)">
+                    Fazer Proposta Directa
+                  </button>
+                </div>
+              }
+            }
+          </div>
+        </div>
+
+        <!-- Meus Pedidos de Cotação -->
+        <div class="section-container">
+          <div class="section-header">
+            <h3><mat-icon>assignment</mat-icon> Nossos Pedidos de Cotação</h3>
+            <button mat-flat-button color="primary" (click)="showRequestModal = true">
+              <mat-icon>add</mat-icon> Criar Pedido
+            </button>
+          </div>
+
+          <div class="requests-list">
+            @if (myPurchaseRequests.length === 0) {
+              <div class="empty-state">
+                <mat-icon>post_add</mat-icon>
+                <p>Nenhum pedido de cotação em aberto. Crie um para receber ofertas dos produtores.</p>
+              </div>
+            } @else {
+              @for (req of myPurchaseRequests; track req.id) {
+                <div class="request-item-card">
+                  <div class="req-main-info">
+                    <h4>{{ req.produto }}</h4>
+                    <span class="req-qty">Necessidade: <strong>{{ req.quantidade }}</strong></span>
+                  </div>
+                  <div class="req-price-info">
+                    <span>Preço Limite</span>
+                    <strong>{{ req.precoMaximo }}</strong>
+                  </div>
+                  <div class="req-status-info">
+                    <span class="badge active">{{ req.status }}</span>
+                    <span class="propostas-badge" *ngIf="req.propostas > 0">{{ req.propostas }} lances de produtores</span>
+                  </div>
+                </div>
+              }
+            }
+          </div>
+        </div>
+      }
+
+      <!-- SEÇÃO EXCLUSIVA: INVESTIDOR (Projetos e Contratos) -->
+      @if (user?.tipo === 'Investidor') {
+        <!-- Projetos de Financiamento Coletivo / Individual -->
+        <div class="section-container" id="projetos-seccao">
+          <div class="section-header">
+            <h3><mat-icon>diversity_3</mat-icon> Oportunidades de Investimento</h3>
+          </div>
+
+          <div class="projects-grid">
+            @for (project of investmentProjects; track project.id) {
+              <div class="project-card">
+                <div class="proj-category-row">
+                  <span class="proj-badge">{{ project.categoria }}</span>
+                  <span class="proj-roi">Retorno: <strong>{{ project.retorno }}</strong></span>
+                </div>
+
+                <h4 class="proj-title">{{ project.titulo }}</h4>
+                <p class="proj-produtor">Proponente: <strong>{{ project.produtor }}</strong></p>
+                <p class="proj-desc">{{ project.descricao }}</p>
+
+                <!-- Financiamento Progress -->
+                <div class="proj-progress-section">
+                  <div class="progress-labels">
+                    <span>Progresso</span>
+                    <strong>{{ (project.valorArrecadado / project.valorNecessario * 100) | number:'1.0-0' }}%</strong>
+                  </div>
+                  <mat-progress-bar mode="determinate" [value]="(project.valorArrecadado / project.valorNecessario * 100)" color="primary"></mat-progress-bar>
+                  <div class="progress-details">
+                    <span>Arrecadado: <strong>{{ project.valorArrecadado | number }} MT</strong></span>
+                    <span>Meta: <strong>{{ project.valorNecessario | number }} MT</strong></span>
+                  </div>
+                </div>
+
+                <button mat-flat-button color="primary" class="invest-btn" 
+                        [disabled]="project.valorArrecadado >= project.valorNecessario"
+                        (click)="openInvestModal(project)">
+                  {{ project.valorArrecadado >= project.valorNecessario ? 'Totalmente Financiado' : 'Apoiar Projecto' }}
+                </button>
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- Contratos e Acompanhamento de Culturas -->
+        <div class="section-container" id="contratos-seccao">
+          <div class="section-header">
+            <h3><mat-icon>shield</mat-icon> Garantias Reais & Acompanhamento de Culturas</h3>
+          </div>
+
+          <div class="invested-list">
+            @if (investedProjects.length === 0) {
+              <div class="empty-state">
+                <mat-icon>account_balance_wallet</mat-icon>
+                <p>Nenhum investimento ativo. Apoie um projeto acima para acompanhar seu progresso.</p>
+              </div>
+            } @else {
+              @for (inv of investedProjects; track inv.id) {
+                <div class="invested-item-card">
+                  <div class="inv-top">
+                    <div>
+                      <h4>{{ inv.titulo }}</h4>
+                      <span class="inv-amount">Meu aporte: <strong>{{ inv.investido | number }} MT</strong></span>
+                    </div>
+                    <div class="inv-status">
+                      <span class="lbl">Retorno Acumulado</span>
+                      <strong class="val text-green">+{{ inv.retornoAcumulado | number }} MT</strong>
+                    </div>
+                  </div>
+
+                  <div class="crop-progress-box">
+                    <div class="crop-labels">
+                      <span>Ciclo de Vida da Cultura: <strong>{{ inv.estagioCultura }}</strong></span>
+                      <span>Colheita: <strong>{{ inv.previsaoColheita }}</strong></span>
+                    </div>
+                    <mat-progress-bar mode="determinate" [value]="inv.progressoCultura" color="accent" class="crop-bar"></mat-progress-bar>
+                  </div>
+                </div>
+              }
+            }
+          </div>
+        </div>
+      }
+
     </div>
 
-    <!-- Coluna Direita: Conexões Ativas e Dados de Mercado -->
+    <!-- Coluna Direita: Widgets de Mercado e Conexões (Comum a Todos) -->
     <div class="right-widgets-col">
       
       <!-- Widget 1: Conexões de Sucesso Campo-Mercado -->
@@ -130,12 +492,17 @@
           <div class="widget-icon-box"><mat-icon>trending_up</mat-icon></div>
           <div>
             <h3>Preços de Referência SIMA</h3>
-            <p>Cotação atualizada do mercado agrícola nacional</p>
+            <p>Cotação de mercado agrícola em Moçambique</p>
           </div>
         </div>
 
+        <div class="price-search-box">
+          <mat-icon>search</mat-icon>
+          <input type="text" [(ngModel)]="priceSearch" placeholder="Pesquisar produto...">
+        </div>
+
         <div class="prices-list">
-          @for (price of prices; track price.produto) {
+          @for (price of filteredPrices; track price.produto) {
             <div class="price-item">
               <span class="price-name">{{ price.produto }}</span>
               <div class="price-data">
@@ -153,4 +520,155 @@
     </div>
 
   </div>
+
+  <!-- ========================================================== -->
+  <!-- MODAL 1: PRODUTOR - REGISTRAR/PUBLICAR OFERTA DE COLHEITA -->
+  <!-- ========================================================== -->
+  <div class="modal-overlay" *ngIf="showOfferModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3><mat-icon>agriculture</mat-icon> Publicar Oferta de Colheita</h3>
+        <button class="close-btn" (click)="showOfferModal = false"><mat-icon>close</mat-icon></button>
+      </div>
+
+      <div class="modal-body">
+        <p class="modal-desc">Sua oferta ficará visível para todos os compradores autorizados do AlvorField.</p>
+        
+        <div class="form-group">
+          <label>Produto / Cultura</label>
+          <input type="text" [(ngModel)]="newOffer.produto" placeholder="Ex: Tomate Calibre A, Milho Branco">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Quantidade Disponível</label>
+            <input type="text" [(ngModel)]="newOffer.quantidade" placeholder="Ex: 2.5 Toneladas, 800 Kg">
+          </div>
+
+          <div class="form-group">
+            <label>Preço Sugerido (MT/Kg)</label>
+            <input type="text" [(ngModel)]="newOffer.preco" placeholder="Ex: 45 MT/Kg">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Localidade de Retirada (Opcional)</label>
+          <input type="text" [(ngModel)]="newOffer.localidade" placeholder="Ex: Machamba Bilene, Gaza">
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button mat-button class="btn-cancel" (click)="showOfferModal = false">Cancelar</button>
+        <button mat-flat-button color="primary" class="btn-submit" (click)="publishOffer()">Publicar Oferta</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================== -->
+  <!-- MODAL 2: COMPRADOR - FAZER PROPOSTA DIRECTA A PRODUTOR -->
+  <!-- ========================================================== -->
+  <div class="modal-overlay" *ngIf="showBidModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3><mat-icon>handshake</mat-icon> Enviar Proposta de Compra</h3>
+        <button class="close-btn" (click)="showBidModal = false"><mat-icon>close</mat-icon></button>
+      </div>
+
+      <div class="modal-body" *ngIf="selectedOfferForBid">
+        <p class="modal-desc">Negocie direto com <strong>{{ selectedOfferForBid.produtor }}</strong> para a cultura de <strong>{{ selectedOfferForBid.produto }}</strong>.</p>
+        
+        <div class="offer-summary-box">
+          <div><span>Disponível:</span> <strong>{{ selectedOfferForBid.quantidade }}</strong></div>
+          <div><span>Preço base:</span> <strong>{{ selectedOfferForBid.preco }}</strong></div>
+        </div>
+
+        <div class="form-group">
+          <label>Quantidade que deseja adquirir</label>
+          <input type="text" [(ngModel)]="newBid.quantidade" placeholder="Ex: 2 Toneladas">
+        </div>
+
+        <div class="form-group">
+          <label>Preço Oferecido (MT/Kg)</label>
+          <input type="number" [(ngModel)]="newBid.preco" placeholder="Ex: 43">
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button mat-button class="btn-cancel" (click)="showBidModal = false">Cancelar</button>
+        <button mat-flat-button color="primary" class="btn-submit" (click)="submitBid()">Enviar Proposta</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================== -->
+  <!-- MODAL 3: COMPRADOR - CRIAR PEDIDO DE COTAÇÃO -->
+  <!-- ========================================================== -->
+  <div class="modal-overlay" *ngIf="showRequestModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3><mat-icon>shopping_cart</mat-icon> Solicitar Pedido de Cotação</h3>
+        <button class="close-btn" (click)="showRequestModal = false"><mat-icon>close</mat-icon></button>
+      </div>
+
+      <div class="modal-body">
+        <p class="modal-desc">Explique o que sua empresa necessita comprar para que produtores lhe enviem propostas de preço.</p>
+        
+        <div class="form-group">
+          <label>Produto Necessário</label>
+          <input type="text" [(ngModel)]="newRequest.produto" placeholder="Ex: Batata Nacional Calibre B">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Volume total necessário</label>
+            <input type="text" [(ngModel)]="newRequest.quantidade" placeholder="Ex: 5 Toneladas">
+          </div>
+
+          <div class="form-group">
+            <label>Preço Máximo Estimado (MT/Kg)</label>
+            <input type="text" [(ngModel)]="newRequest.precoMaximo" placeholder="Ex: 40">
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button mat-button class="btn-cancel" (click)="showRequestModal = false">Cancelar</button>
+        <button mat-flat-button color="primary" class="btn-submit" (click)="publishPurchaseRequest()">Publicar Pedido</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================== -->
+  <!-- MODAL 4: INVESTIDOR - SIMULAR INVESTIMENTO EM PROJETO -->
+  <!-- ========================================================== -->
+  <div class="modal-overlay" *ngIf="showInvestModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3><mat-icon>trending_up</mat-icon> Financiar Projeto Agrícola</h3>
+        <button class="close-btn" (click)="showInvestModal = false"><mat-icon>close</mat-icon></button>
+      </div>
+
+      <div class="modal-body" *ngIf="selectedProjectForInvestment">
+        <p class="modal-desc">Apoie a modernização da machamba de <strong>{{ selectedProjectForInvestment.produtor }}</strong>.</p>
+        
+        <div class="project-minisummary">
+          <h4>{{ selectedProjectForInvestment.titulo }}</h4>
+          <p>Categoria: <strong>{{ selectedProjectForInvestment.categoria }}</strong></p>
+          <p>Estimativa de Retorno: <strong class="text-green">{{ selectedProjectForInvestment.retorno }}</strong></p>
+        </div>
+
+        <div class="form-group">
+          <label>Valor do Aporte (MT)</label>
+          <input type="number" [(ngModel)]="investAmount" placeholder="Ex: 50000">
+          <span class="input-helper">A meta restante do projeto é de {{ (selectedProjectForInvestment.valorNecessario - selectedProjectForInvestment.valorArrecadado) | number }} MT.</span>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button mat-button class="btn-cancel" (click)="showInvestModal = false">Cancelar</button>
+        <button mat-flat-button color="primary" class="btn-submit" (click)="submitInvestment()">Confirmar Aporte</button>
+      </div>
+    </div>
+  </div>
+
 </div>
