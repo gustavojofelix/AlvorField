@@ -18,12 +18,12 @@
             </span>
             <span class="badge-reputation" style="display: inline-flex; align-items: center; background: rgba(255,255,255,0.25); color: #fff; padding: 2px 8px; border-radius: 12px; font-weight: bold; font-size: 0.8rem; gap: 2px; border: 1px solid rgba(255,255,255,0.3);">
               <mat-icon style="font-size: 14px; width: 14px; height: 14px; color: #ffeb3b; display: inline-flex; align-items: center; justify-content: center;">star</mat-icon>
-              {{ evaluationService.getUserReputation(currentUser?.id || 0).average }} 
+              {{ reputationAverage }} 
               <span style="font-weight: normal; opacity: 0.9; font-size: 0.75rem;">
-                ({{ evaluationService.getUserReputation(currentUser?.id || 0).total }} avaliações)
+                ({{ reputationTotal }} avaliações)
               </span>
               <span style="margin-left: 4px; padding-left: 4px; border-left: 1px solid rgba(255,255,255,0.3); font-weight: bold;">
-                💼 {{ evaluationService.getCompletedTransactionsCount(currentUser?.id || 0) }} concluídas
+                💼 {{ completedTransactions }} concluídas
               </span>
             </span>
           </div>
@@ -324,18 +324,18 @@
     <!-- Histórico de Avaliações Recebidas -->
     <mat-card class="profile-mat-card" style="margin-top: 24px;">
       <div class="card-header" style="border-bottom: 1px solid #f1f5f9; padding-bottom: 12px; margin-bottom: 16px;">
-        <h3>Avaliações Recebidas ({{ reviews.length }})</h3>
+        <h3>Avaliações Recebidas ({{ userReviews.length }})</h3>
         <p>Histórico de reputação e comentários deixados por outros produtores e compradores com quem negociou.</p>
       </div>
 
-      @if (reviews.length === 0) {
+      @if (userReviews.length === 0) {
         <div style="text-align: center; padding: 30px; color: #64748b;">
           <mat-icon style="font-size: 48px; width: 48px; height: 48px; color: #cbd5e1; margin-bottom: 8px;">star_outline</mat-icon>
           <p>Ainda não possui avaliações no sistema.</p>
         </div>
       } @else {
         <div style="display: flex; flex-direction: column; gap: 16px;">
-          @for (rev of reviews; track rev.id) {
+          @for (rev of userReviews; track rev.id) {
             <div style="border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; background: #fafafa;">
               <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px;">
                 <div>

@@ -108,7 +108,7 @@ export class DashboardComponent implements OnInit {
   showRequestModal = false;
   showInvestModal = false;
   showDeleteConfirmModal = false;
-  offerToDeleteId: number | null = null;
+  offerToDeleteId: string | number | null = null;
 
   // Reputação e Avaliação Modais
   showEvaluationModal = false;
@@ -118,10 +118,13 @@ export class DashboardComponent implements OnInit {
   
   // Denúncias e Moderação
   showReportModal = false;
-  evaluationToReportId: number | null = null;
+  evaluationToReportId: string | number | null = null;
   reportReason = '';
   reportedEvaluations: Evaluation[] = [];
   allEvaluations: Evaluation[] = [];
+
+  userReputation = { average: 5, total: 0 };
+  completedTransactionsCount = 0;
 
   // Form de Oferta
   newOffer = {
@@ -137,7 +140,7 @@ export class DashboardComponent implements OnInit {
     longitude: undefined as number | undefined,
     fotos: [] as string[]
   };
-  editingOfferId: number | null = null;
+  editingOfferId: string | number | null = null;
 
   // Dropdown e localizações
   productsList: string[] = [];
@@ -165,35 +168,7 @@ export class DashboardComponent implements OnInit {
   provincias = ['Todas', 'Maputo', 'Gaza', 'Inhambane', 'Sofala', 'Nampula'];
 
   // Dados Compartilhados / Conexões Recentes no ecossistema AlvorField
-  connections: Connection[] = [
-    {
-      produtor: 'Mateus Tembe',
-      consumidor: 'Lúcia Maputo',
-      distrito: 'Bilene → Maputo',
-      produto: 'Tomate Calibre A',
-      quantidade: '2.5 Toneladas',
-      status: 'Concluído',
-      timestamp: 'Há 2 horas'
-    },
-    {
-      produtor: 'Cooperativa de Chókwè',
-      consumidor: 'Supermercados VIP',
-      distrito: 'Chókwè → Maputo',
-      produto: 'Arroz de Sequeiro',
-      quantidade: '10 Toneladas',
-      status: 'Em Trânsito',
-      timestamp: 'Há 5 horas'
-    },
-    {
-      produtor: 'Machamba de Namaacha',
-      consumidor: 'Hotel Polana',
-      distrito: 'Namaacha → Maputo',
-      produto: 'Hortelã e Alface Orgânica',
-      quantidade: '300 Kg',
-      status: 'Acordado',
-      timestamp: 'Há 1 dia'
-    }
-  ];
+  connections: Connection[] = [];
 
   // Preços médios de mercado (Moçambique SIMA)
   prices: PriceTicker[] = [
@@ -296,16 +271,59 @@ export class DashboardComponent implements OnInit {
     private snack: MatSnackBar
   ) {}
 
-  ngOnInit(): void {
+  get produtorSales(): number {
+    return this.produtorOffers
+      .filter(o => o.estado === 'Concluída')
+      .reduce((sum, o) => {
+        const qtyInKg = o.unidade === 'ton' ? o.quantidade * 1000 : o.quantidade;
+        return sum + (qtyInKg * o.precoUnitario);
+      }, 0);
+  }
+
+  get compradorTotalAcquired(): number {
+    return this.sentInterests
+      .filter(i => i.status === 'Concluido')
+      .reduce((sum, i) => {
+        const qty = i.quantidadePretendida || 0;
+        const qtyInKg = i.unidade === 'ton' ? qty * 1000 : qty;
+        return sum + (qtyInKg * i.precoProposto);
+      }, 0);
+  }
+
+  get compradorUniquePartnersCount(): number {
+    const partners = this.sentInterests.map(i => i.produtorId);
+    return new Set(partners).size;
+  }
+
+  get investidorCapitalAlocado(): number {
+    return this.investedProjects.reduce((sum, p) => sum + (p.investido || 0), 0);
+  }
+
+  get investidorRetornoMedio(): string {
+    if (this.investedProjects.length === 0) return '0.0%';
+    const totalInvestido = this.investidorCapitalAlocado;
+    if (totalInvestido === 0) return '0.0%';
+    const totalRetorno = this.investedProjects.reduce((sum, p) => sum + (p.retornoAcumulado || 0), 0);
+    return `+${((totalRetorno / totalInvestido) * 100).toFixed(1)}%`;
+  }
+
+  async ngOnInit(): Promise<void> {
     this.user = this.authService.getCurrentUser();
     this.setGreeting();
     this.setDashboardCards();
-    this.productsList = this.offerService.PREDEFINED_PRODUCTS;
+    this.productsList = await this.offerService.getPredefinedProducts();
     this.provincesList = this.locationService.getProvinces();
     this.loadMockData();
-    this.loadOffers();
-    this.loadInterests();
-    this.loadAdminData();
+    await this.loadOffers();
+    await this.loadInterests();
+    await this.loadAdminData();
+    await this.loadUserReputation();
+  }
+
+  async loadUserReputation(): Promise<void> {
+    if (!this.user) return;
+    this.userReputation = await this.evaluationService.getUserReputation(this.user.id);
+    this.completedTransactionsCount = await this.evaluationService.getCompletedTransactionsCount(this.user.id);
   }
 
   private setGreeting(): void {
@@ -397,103 +415,24 @@ export class DashboardComponent implements OnInit {
   }
 
   loadMockData(): void {
-    // Carregar Projetos de Investimento
-    const localProj = localStorage.getItem('alvor_invest_projects');
-    if (localProj) {
-      this.investmentProjects = JSON.parse(localProj);
-    } else {
-      this.investmentProjects = [
-        {
-          id: 501,
-          titulo: 'Sistema de Rega Gota-a-Gota no Bilene',
-          produtor: 'Mateus Tembe',
-          valorNecessario: 180000,
-          valorArrecadado: 120000,
-          categoria: 'Irrigação',
-          retorno: '18% a.a.',
-          descricao: 'Projeto de instalação de rega localizada para cultura intensiva de batata doce e cebola vermelha.'
-        },
-        {
-          id: 502,
-          titulo: 'Mecanização de Machamba de Milho',
-          produtor: 'Cooperativa de Chókwè',
-          valorNecessario: 450000,
-          valorArrecadado: 380000,
-          categoria: 'Equipamento',
-          retorno: '15% a.a.',
-          descricao: 'Aquisição de micro-tractor e alfaias para lavoura e sementeira mecanizada de 20 hectares.'
-        }
-      ];
-      localStorage.setItem('alvor_invest_projects', JSON.stringify(this.investmentProjects));
-    }
+    const user = this.authService.getCurrentUser();
+    
+    // Projetos de Investimento
+    this.investmentProjects = user?.preferences?.invest_projects || [];
 
-    // Carregar Carteira de Investimentos
-    const localInvested = localStorage.getItem('alvor_invested_projects');
-    if (localInvested) {
-      this.investedProjects = JSON.parse(localInvested);
-    } else {
-      this.investedProjects = [
-        {
-          id: 501,
-          titulo: 'Sistema de Rega Gota-a-Gota no Bilene',
-          investido: 50000,
-          retornoAcumulado: 4500,
-          progressoCultura: 65,
-          estagioCultura: 'Crescimento vegetativo',
-          previsaoColheita: 'Julho 2026'
-        }
-      ];
-      localStorage.setItem('alvor_invested_projects', JSON.stringify(this.investedProjects));
-    }
+    // Carteira de Investimentos
+    this.investedProjects = user?.preferences?.invested_projects || [];
 
     // Propostas de Compradores
-    const localProposals = localStorage.getItem('alvor_buyer_proposals');
-    if (localProposals) {
-      this.buyerProposals = JSON.parse(localProposals);
-    } else {
-      this.buyerProposals = [
-        {
-          id: 301,
-          comprador: 'Supermercado Lúcia S.A.',
-          produto: 'Tomate Calibre A',
-          quantidade: '2.5 Toneladas',
-          precoOferecido: '43.00 MT/Kg',
-          status: 'Pendente'
-        },
-        {
-          id: 302,
-          comprador: 'Restaurante Costa do Sol',
-          produto: 'Cebola Vermelha',
-          quantidade: '500 Kg',
-          precoOferecido: '52.50 MT/Kg',
-          status: 'Pendente'
-        }
-      ];
-      localStorage.setItem('alvor_buyer_proposals', JSON.stringify(this.buyerProposals));
-    }
+    this.buyerProposals = user?.preferences?.buyer_proposals || [];
 
-    // Pedidos de Cotação do Comprador
-    const localReqs = localStorage.getItem('alvor_purchase_requests');
-    if (localReqs) {
-      this.myPurchaseRequests = JSON.parse(localReqs);
-    } else {
-      this.myPurchaseRequests = [
-        {
-          id: 401,
-          produto: 'Milho Branco Moçambicano',
-          quantidade: '8 Toneladas',
-          precoMaximo: '26.00 MT/Kg',
-          status: 'Aberto',
-          propostas: 3
-        }
-      ];
-      localStorage.setItem('alvor_purchase_requests', JSON.stringify(this.myPurchaseRequests));
-    }
+    // Pedidos de Cotação
+    this.myPurchaseRequests = user?.preferences?.purchase_requests || [];
   }
 
-  loadOffers(): void {
-    this.produtorOffers = this.offerService.getOffers().filter(o => o.produtorId === this.user?.id);
-    this.availableOffers = this.offerService.getPublicOffers();
+  async loadOffers(): Promise<void> {
+    this.produtorOffers = (await this.offerService.getOffers()).filter(o => o.produtorId === this.user?.id);
+    this.availableOffers = await this.offerService.getPublicOffers();
   }
 
   onProvinceChange(): void {
@@ -721,9 +660,9 @@ export class DashboardComponent implements OnInit {
     this.loadOffers();
   }
 
-  togglePauseOffer(id: number): void {
-    this.offerService.togglePauseOffer(id);
-    this.loadOffers();
+  async togglePauseOffer(id: string | number): Promise<void> {
+    await this.offerService.togglePauseOffer(id);
+    await this.loadOffers();
     const offer = this.produtorOffers.find(o => o.id === id);
     if (offer) {
       const msg = offer.estado === 'Pausada' ? 'Oferta pausada (oculta para compradores).' : 'Oferta reactivada com sucesso!';
@@ -731,19 +670,19 @@ export class DashboardComponent implements OnInit {
     }
   }
 
-  deleteOffer(id: number): void {
+  deleteOffer(id: string | number): void {
     this.offerToDeleteId = id;
     this.showDeleteConfirmModal = true;
   }
 
-  confirmDeleteOffer(): void {
+  async confirmDeleteOffer(): Promise<void> {
     if (this.offerToDeleteId !== null) {
-      this.offerService.deleteOffer(this.offerToDeleteId);
+      await this.offerService.deleteOffer(this.offerToDeleteId);
       this.snack.open('Oferta removida com sucesso.', 'OK', {
         duration: 3000,
         panelClass: ['snackbar-success']
       });
-      this.loadOffers();
+      await this.loadOffers();
     }
     this.showDeleteConfirmModal = false;
     this.offerToDeleteId = null;
@@ -754,13 +693,13 @@ export class DashboardComponent implements OnInit {
     this.offerToDeleteId = null;
   }
 
-  markAsCompleted(id: number): void {
-    this.offerService.markAsCompleted(id);
+  async markAsCompleted(id: string | number): Promise<void> {
+    await this.offerService.markAsCompleted(id);
     this.snack.open('Oferta marcada como Vendida/Concluída manualmente.', 'Excelente', {
       duration: 3000,
       panelClass: ['snackbar-success']
     });
-    this.loadOffers();
+    await this.loadOffers();
   }
 
   acceptProposal(proposal: BuyerProposal): void {
@@ -790,15 +729,15 @@ export class DashboardComponent implements OnInit {
     this.snack.open(`Proposta da ${proposal.comprador} recusada.`, 'OK', { duration: 3000 });
   }
 
-  loadInterests(): void {
+  async loadInterests(): Promise<void> {
     if (!this.user) return;
-    this.receivedInterests = this.interestService.getReceivedInterests(this.user.id);
-    this.sentInterests = this.interestService.getSentInterests(this.user.id);
+    this.receivedInterests = await this.interestService.getReceivedInterests(this.user.id);
+    this.sentInterests = await this.interestService.getSentInterests(this.user.id);
   }
 
-  acceptInterest(interest: Interest): void {
+  async acceptInterest(interest: Interest): Promise<void> {
     try {
-      this.interestService.acceptInterest(interest.id);
+      await this.interestService.acceptInterest(interest.id);
       this.snack.open(`Contacto de ${interest.compradorNome} ACEITO com sucesso! O comprador foi notificado por SMS.`, 'Excelente', {
         duration: 4000,
         panelClass: ['snackbar-success']
@@ -812,17 +751,17 @@ export class DashboardComponent implements OnInit {
         status: 'Contacto Partilhado',
         timestamp: 'Agora mesmo'
       });
-      this.loadInterests();
+      await this.loadInterests();
     } catch (e: any) {
       this.snack.open(e.message || 'Erro ao aceitar contacto.', 'OK', { duration: 3000 });
     }
   }
 
-  refuseInterest(interest: Interest): void {
+  async refuseInterest(interest: Interest): Promise<void> {
     try {
-      this.interestService.refuseInterest(interest.id);
+      await this.interestService.refuseInterest(interest.id);
       this.snack.open(`Manifestação de interesse de ${interest.compradorNome} recusada.`, 'OK', { duration: 3000 });
-      this.loadInterests();
+      await this.loadInterests();
     } catch (e: any) {
       this.snack.open(e.message || 'Erro ao recusar contacto.', 'OK', { duration: 3000 });
     }
@@ -1022,7 +961,7 @@ export class DashboardComponent implements OnInit {
     this.showEvaluationModal = true;
   }
 
-  submeterAvaliacao(): void {
+  async submeterAvaliacao(): Promise<void> {
     if (!this.selectedInterestForEvaluation || !this.user) return;
 
     const interest = this.selectedInterestForEvaluation;
@@ -1031,7 +970,7 @@ export class DashboardComponent implements OnInit {
     const toUserName = isComprador ? interest.produtorNome : interest.compradorNome;
 
     try {
-      this.evaluationService.createEvaluation(
+      await this.evaluationService.createEvaluation(
         interest.id,
         this.user.id,
         this.user.nome,
@@ -1041,7 +980,7 @@ export class DashboardComponent implements OnInit {
         this.evalComment
       );
 
-      this.interestService.markAsRated(interest.id, this.user.id);
+      await this.interestService.markAsRated(interest.id, this.user.id);
 
       this.snack.open(`Avaliação submetida com sucesso para ${toUserName}!`, 'Sucesso', {
         duration: 3000,
@@ -1050,45 +989,46 @@ export class DashboardComponent implements OnInit {
 
       this.showEvaluationModal = false;
       this.selectedInterestForEvaluation = null;
-      this.loadInterests();
-      this.loadOffers();
-      this.loadAdminData();
+      await this.loadInterests();
+      await this.loadOffers();
+      await this.loadAdminData();
+      await this.loadUserReputation();
     } catch (e: any) {
       this.snack.open(e.message || 'Erro ao guardar avaliação.', 'Erro', { duration: 3000 });
     }
   }
 
   // RF-44 & RF-50: Administrador - carregar dados de moderação e consola global
-  loadAdminData(): void {
+  async loadAdminData(): Promise<void> {
     if (this.user?.isAdmin) {
-      this.reportedEvaluations = this.evaluationService.getReportedEvaluations();
-      this.allEvaluations = this.evaluationService.getAllEvaluations();
-      this.loadAdminPanelData();
+      this.reportedEvaluations = await this.evaluationService.getReportedEvaluations();
+      this.allEvaluations = await this.evaluationService.getAllEvaluations();
+      await this.loadAdminPanelData();
     }
   }
 
-  abrirModalReportar(evaluationId: number): void {
+  abrirModalReportar(evaluationId: string | number): void {
     this.evaluationToReportId = evaluationId;
     this.reportReason = '';
     this.showReportModal = true;
   }
 
-  submeterDenuncia(): void {
+  async submeterDenuncia(): Promise<void> {
     if (this.evaluationToReportId === null || !this.reportReason) return;
 
-    this.evaluationService.reportEvaluation(this.evaluationToReportId, this.reportReason);
+    await this.evaluationService.reportEvaluation(this.evaluationToReportId, this.reportReason);
     this.snack.open('A sua denúncia foi enviada para análise da administração.', 'Obrigado', { duration: 3500 });
     this.showReportModal = false;
     this.evaluationToReportId = null;
-    this.loadAdminData();
+    await this.loadAdminData();
   }
 
-  removerAvaliacao(evaluationId: number): void {
+  async removerAvaliacao(evaluationId: string | number): Promise<void> {
     if (!this.user?.isAdmin) return;
-    this.evaluationService.removeEvaluation(evaluationId);
+    await this.evaluationService.removeEvaluation(evaluationId);
     
     // Log de auditoria para remoção de avaliação
-    this.adminService.logAction(
+    await this.adminService.logAction(
       this.user.nome,
       'Removeu Avaliação',
       `ID da Avaliação: ${evaluationId}`
@@ -1098,8 +1038,8 @@ export class DashboardComponent implements OnInit {
       duration: 3000,
       panelClass: ['snackbar-success']
     });
-    this.loadAdminData();
-    this.loadOffers();
+    await this.loadAdminData();
+    await this.loadOffers();
   }
 
   // ==========================================
@@ -1113,7 +1053,7 @@ export class DashboardComponent implements OnInit {
     quantidadeOfertas: number;
     volumeFormatado: string;
   }> {
-    const allActiveOffers = this.offerService.getPublicOffers();
+    const allActiveOffers = this.availableOffers;
     
     const filtered = allActiveOffers.filter(offer => {
       if (this.investorFilters.produto !== 'Todos' && offer.produto !== this.investorFilters.produto) {
@@ -1276,18 +1216,16 @@ export class DashboardComponent implements OnInit {
   // MÓDULO 7: GESTÃO DO PAINEL DE ADMINISTRAÇÃO (RF-50 A RF-56)
   // ==========================================================
   
-  loadAdminPanelData(): void {
+  async loadAdminPanelData(): Promise<void> {
     // RF-50: Visão completa de todos os utilizadores, ofertas, interesses e avaliações
-    this.adminUsers = this.authService.getAllUsersWithDeleted();
-    this.adminOffers = this.offerService.getOffers();
+    this.adminUsers = await this.authService.getAllUsersWithDeleted();
+    this.adminOffers = await this.offerService.getOffers();
     
-    // Ler interesses em localStorage de forma global
-    const localInts = localStorage.getItem('alvorfield_interests');
-    this.adminInterests = localInts ? JSON.parse(localInts) : [];
+    this.adminInterests = await this.interestService.getAllInterests();
     
-    this.adminEvaluations = this.evaluationService.getAllEvaluations();
-    this.adminAuditLogs = this.adminService.getAuditLogs();
-    this.adminReportRequests = this.adminService.getReportRequests();
+    this.adminEvaluations = await this.evaluationService.getAllEvaluations();
+    this.adminAuditLogs = await this.adminService.getAuditLogs();
+    this.adminReportRequests = await this.adminService.getReportRequests();
 
     // RF-53: Calcular estatísticas dinâmicas
     this.calculateAdminStats();
@@ -1336,18 +1274,17 @@ export class DashboardComponent implements OnInit {
     };
   }
 
-  // RF-51: Activar, Suspender ou Eliminar qualquer conta de utilizador
-  alterarEstadoUtilizador(userId: number, novoEstado: 'Activo' | 'Suspenso' | 'Eliminado'): void {
+  async alterarEstadoUtilizador(userId: string | number, novoEstado: 'Activo' | 'Suspenso' | 'Eliminado'): Promise<void> {
     if (!this.user?.isAdmin) return;
     
     const targetUser = this.adminUsers.find(u => u.id === userId);
     if (!targetUser) return;
 
     try {
-      this.authService.updateUserStatus(userId, novoEstado);
+      await this.authService.updateUserStatus(userId, novoEstado);
       
       // Log de Auditoria
-      this.adminService.logAction(
+      await this.adminService.logAction(
         this.user.nome,
         `${novoEstado === 'Activo' ? 'Activou' : novoEstado === 'Suspenso' ? 'Suspendeu' : 'Eliminou'} Utilizador`,
         `Utilizador: ${targetUser.nome} (${targetUser.tipo}), Telefone: ${targetUser.telefone}`
@@ -1358,25 +1295,25 @@ export class DashboardComponent implements OnInit {
         'Sucesso', 
         { duration: 3000, panelClass: ['snackbar-success'] }
       );
-      this.loadAdminPanelData();
+      await this.loadAdminPanelData();
     } catch (e: any) {
       this.snack.open(e.message || 'Erro ao alterar estado.', 'Erro', { duration: 3000 });
     }
   }
 
   // RF-52: Adicionar novo produto
-  adminAdicionarProduto(): void {
+  async adminAdicionarProduto(): Promise<void> {
     if (!this.user?.isAdmin || !this.newProductInput.trim()) return;
 
     try {
-      this.adminService.addProduct(this.newProductInput, this.user.nome);
+      await this.adminService.addProduct(this.newProductInput, this.user.nome);
       this.newProductInput = '';
-      this.productsList = this.offerService.PREDEFINED_PRODUCTS; // Recarregar a lista reativa
+      this.productsList = await this.offerService.getPredefinedProducts(); // Recarregar a lista reativa
       this.snack.open('Produto adicionado à lista do sistema com sucesso!', 'Excelente', {
         duration: 3000,
         panelClass: ['snackbar-success']
       });
-      this.loadAdminPanelData();
+      await this.loadAdminPanelData();
     } catch (e: any) {
       this.snack.open(e.message || 'Erro ao adicionar produto.', 'Erro', { duration: 3000 });
     }
@@ -1389,51 +1326,51 @@ export class DashboardComponent implements OnInit {
     this.showProductEditModal = true;
   }
 
-  salvarEdicaoProduto(): void {
+  async salvarEdicaoProduto(): Promise<void> {
     if (!this.user?.isAdmin || !this.editingProductNewName.trim()) return;
 
     try {
-      this.adminService.editProduct(this.editingProductOldName, this.editingProductNewName, this.user.nome);
+      await this.adminService.editProduct(this.editingProductOldName, this.editingProductNewName, this.user.nome);
       this.showProductEditModal = false;
-      this.productsList = this.offerService.PREDEFINED_PRODUCTS; // Recarregar a lista reativa
+      this.productsList = await this.offerService.getPredefinedProducts(); // Recarregar a lista reativa
       this.snack.open('Produto renomeado com sucesso!', 'Excelente', {
         duration: 3000,
         panelClass: ['snackbar-success']
       });
-      this.loadAdminPanelData();
+      await this.loadAdminPanelData();
     } catch (e: any) {
       this.snack.open(e.message || 'Erro ao renomear produto.', 'Erro', { duration: 3000 });
     }
   }
 
   // RF-52: Remover produto
-  adminRemoverProduto(name: string): void {
+  async adminRemoverProduto(name: string): Promise<void> {
     if (!this.user?.isAdmin) return;
 
     try {
-      this.adminService.deleteProduct(name, this.user.nome);
-      this.productsList = this.offerService.PREDEFINED_PRODUCTS; // Recarregar a lista reativa
+      await this.adminService.deleteProduct(name, this.user.nome);
+      this.productsList = await this.offerService.getPredefinedProducts(); // Recarregar a lista reativa
       this.snack.open('Produto removido do sistema com sucesso.', 'OK', {
         duration: 3000,
         panelClass: ['snackbar-success']
       });
-      this.loadAdminPanelData();
+      await this.loadAdminPanelData();
     } catch (e: any) {
       this.snack.open(e.message || 'Erro ao remover produto.', 'Erro', { duration: 3000 });
     }
   }
 
   // RF-55: Forçar expiração de qualquer oferta
-  adminForcarExpiracaoOferta(offerId: number): void {
+  async adminForcarExpiracaoOferta(offerId: string | number): Promise<void> {
     if (!this.user?.isAdmin) return;
 
     const offer = this.adminOffers.find(o => o.id === offerId);
     if (!offer) return;
 
     try {
-      this.offerService.adminForceExpire(offerId);
+      await this.offerService.adminForceExpire(offerId);
       
-      this.adminService.logAction(
+      await this.adminService.logAction(
         this.user.nome,
         'Forçou Expiração de Oferta',
         `Oferta ID: ${offer.id}, Produtor: ${offer.produtorNome}, Cultura: ${offer.produto}`
@@ -1444,8 +1381,8 @@ export class DashboardComponent implements OnInit {
         panelClass: ['snackbar-success']
       });
       
-      this.loadOffers();
-      this.loadAdminPanelData();
+      await this.loadOffers();
+      await this.loadAdminPanelData();
     } catch (e: any) {
       this.snack.open(e.message || 'Erro ao expirar oferta.', 'Erro', { duration: 3000 });
     }
@@ -1506,11 +1443,11 @@ export class DashboardComponent implements OnInit {
     this.showAdminReportResponseModal = true;
   }
 
-  enviarRelatorioInvestidor(): void {
+  async enviarRelatorioInvestidor(): Promise<void> {
     if (!this.user?.isAdmin || !this.selectedReportRequestForResponse || !this.adminReportResponseText.trim()) return;
 
     try {
-      this.adminService.respondToReportRequest(
+      await this.adminService.respondToReportRequest(
         this.selectedReportRequestForResponse.id,
         this.adminReportResponseText,
         this.user.nome
@@ -1524,7 +1461,7 @@ export class DashboardComponent implements OnInit {
 
       this.showAdminReportResponseModal = false;
       this.selectedReportRequestForResponse = null;
-      this.loadAdminPanelData();
+      await this.loadAdminPanelData();
     } catch (e: any) {
       this.snack.open(e.message || 'Erro ao enviar relatório.', 'Erro', { duration: 3000 });
     }

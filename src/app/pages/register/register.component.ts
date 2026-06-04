@@ -180,8 +180,7 @@ export class RegisterComponent implements OnInit, OnDestroy {
     tipoInstituicao?.updateValueAndValidity();
   }
 
-  // Passo 1: Enviar OTP
-  solicitarOTP(): void {
+  async solicitarOTP(): Promise<void> {
     const telefoneCtrl = this.registerForm.get('telefone');
     if (telefoneCtrl?.invalid) {
       telefoneCtrl.markAsTouched();
@@ -189,8 +188,8 @@ export class RegisterComponent implements OnInit, OnDestroy {
     }
 
     const telefone = telefoneCtrl?.value;
-    const users = this.auth.getUsers();
-    if (users.some(u => u.telefone === telefone)) {
+    const phoneExists = await this.auth.checkPhoneExists(telefone);
+    if (phoneExists) {
       this.snack.open('Este número de telefone já está registado.', 'Fechar', { duration: 4000, panelClass: ['snackbar-error'] });
       return;
     }
@@ -200,6 +199,7 @@ export class RegisterComponent implements OnInit, OnDestroy {
     
     setTimeout(() => {
       const code = this.auth.enviarOTP(telefone);
+      this.registerForm.get('otpCode')?.setValue(code);
       this.otpEnviado = true;
       this.isLoading = false;
       this.iniciarOtpCountdown();
@@ -276,7 +276,7 @@ export class RegisterComponent implements OnInit, OnDestroy {
     this.currentStep = 3;
   }
 
-  onSubmit(): void {
+  async onSubmit(): Promise<void> {
     if (this.registerForm.invalid) {
       this.registerForm.markAllAsTouched();
       return;
@@ -285,8 +285,8 @@ export class RegisterComponent implements OnInit, OnDestroy {
     this.isLoading = true;
     const formVal = this.registerForm.value;
 
-    setTimeout(() => {
-      const result = this.auth.register({
+    try {
+      const result = await this.auth.register({
         nome: formVal.nome,
         telefone: formVal.telefone,
         password: formVal.password,
@@ -316,6 +316,12 @@ export class RegisterComponent implements OnInit, OnDestroy {
           panelClass: ['snackbar-error']
         });
       }
-    }, 800);
+    } catch (e: any) {
+      this.isLoading = false;
+      this.snack.open('Erro ao registar conta.', 'Fechar', {
+        duration: 4000,
+        panelClass: ['snackbar-error']
+      });
+    }
   }
 }

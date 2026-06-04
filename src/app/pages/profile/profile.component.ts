@@ -46,8 +46,13 @@ export class ProfileComponent implements OnInit {
 
   // Denúncia de avaliações no perfil
   showReportModal = false;
-  evaluationToReportId: number | null = null;
+  evaluationToReportId: string | number | null = null;
   reportReason = '';
+
+  userReviews: Evaluation[] = [];
+  reputationAverage = 5.0;
+  reputationTotal = 0;
+  completedTransactions = 0;
 
 
   buyerTypes = ['Processador', 'Grossista', 'Exportador', 'Retalhista', 'Outro'];
@@ -107,7 +112,7 @@ export class ProfileComponent implements OnInit {
     });
   }
 
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
     this.provinces = this.locationService.getProvinces();
     this.currentUser = this.auth.getCurrentUser();
 
@@ -121,8 +126,17 @@ export class ProfileComponent implements OnInit {
       this.districts = this.locationService.getDistrictsForProvince(prov);
     });
 
-    // Carregar dados no formulário
     this.carregarDadosUtilizador();
+    await this.loadReputationAndReviews();
+  }
+
+  async loadReputationAndReviews(): Promise<void> {
+    if (!this.currentUser) return;
+    const reputation = await this.evaluationService.getUserReputation(this.currentUser.id);
+    this.reputationAverage = reputation.average;
+    this.reputationTotal = reputation.total;
+    this.completedTransactions = await this.evaluationService.getCompletedTransactionsCount(this.currentUser.id);
+    this.userReviews = await this.evaluationService.getEvaluationsForUser(this.currentUser.id);
   }
 
   private carregarDadosUtilizador(): void {
@@ -192,17 +206,17 @@ export class ProfileComponent implements OnInit {
     tipoInstituicao?.updateValueAndValidity();
   }
 
-  onSubmit(): void {
+  async onSubmit(): Promise<void> {
     if (this.profileForm.invalid) {
       this.profileForm.markAllAsTouched();
       return;
     }
 
     this.isLoading = true;
-    const formVal = this.profileForm.getRawValue(); // Usa getRawValue para capturar campos disabled se necessário
+    const formVal = this.profileForm.getRawValue();
 
-    setTimeout(() => {
-      const result = this.auth.atualizarPerfil({
+    try {
+      const result = await this.auth.atualizarPerfil({
         nome: formVal.nome,
         provincia: formVal.provincia,
         distrito: formVal.distrito,
@@ -236,36 +250,39 @@ export class ProfileComponent implements OnInit {
           panelClass: ['snackbar-success']
         });
         this.currentUser = this.auth.getCurrentUser(); // recarregar utilizador
+        await this.loadReputationAndReviews();
       } else {
         this.snack.open(result.message, 'Fechar', {
           duration: 4000,
           panelClass: ['snackbar-error']
         });
       }
-    }, 600);
+    } catch (e: any) {
+      this.isLoading = false;
+      this.snack.open('Erro ao atualizar perfil.', 'Fechar', { duration: 4000 });
+    }
   }
 
   voltar(): void {
     this.router.navigate(['/dashboard']);
   }
 
-  // Obter avaliações recebidas
-  get reviews(): Evaluation[] {
-    if (!this.currentUser) return [];
-    return this.evaluationService.getEvaluationsForUser(this.currentUser.id);
-  }
-
-  abrirModalReportar(evaluationId: number): void {
+  abrirModalReportar(evaluationId: string | number): void {
     this.evaluationToReportId = evaluationId;
     this.reportReason = '';
     this.showReportModal = true;
   }
 
-  submeterDenuncia(): void {
+  async submeterDenuncia(): Promise<void> {
     if (this.evaluationToReportId === null || !this.reportReason) return;
-    this.evaluationService.reportEvaluation(this.evaluationToReportId, this.reportReason);
-    this.snack.open('Avaliação denunciada aos administradores.', 'OK', { duration: 3000 });
-    this.showReportModal = false;
-    this.evaluationToReportId = null;
+    try {
+      await this.evaluationService.reportEvaluation(this.evaluationToReportId, this.reportReason);
+      this.snack.open('Avaliação denunciada aos administradores.', 'OK', { duration: 3000 });
+      this.showReportModal = false;
+      this.evaluationToReportId = null;
+      await this.loadReputationAndReviews();
+    } catch (e: any) {
+      this.snack.open('Erro ao denunciar avaliação.', 'Fechar', { duration: 4000 });
+    }
   }
 }

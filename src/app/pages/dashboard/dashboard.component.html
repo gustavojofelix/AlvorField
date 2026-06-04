@@ -20,12 +20,12 @@
           </span>
           <span class="reputation-badge" style="display: inline-flex; align-items: center; background: rgba(255,193,7,0.15); color: #b58200; padding: 4px 10px; border-radius: 20px; font-weight: bold; font-size: 0.85rem; gap: 4px; margin-left: 8px; vertical-align: middle; border: 1px solid rgba(255,193,7,0.3);">
             <mat-icon style="font-size: 16px; width: 16px; height: 16px; color: #ffb300; display: inline-flex; align-items: center;">star</mat-icon>
-            {{ evaluationService.getUserReputation(user?.id || 0).average }} 
+            {{ userReputation.average }} 
             <span style="font-weight: normal; color: #64748b; font-size: 0.75rem;">
-              ({{ evaluationService.getUserReputation(user?.id || 0).total }} avaliações)
+              ({{ userReputation.total }} avaliações)
             </span>
             <span style="margin-left: 6px; padding-left: 6px; border-left: 1px solid rgba(0,0,0,0.1); color: #0288d1; font-weight: bold;">
-              💼 {{ evaluationService.getCompletedTransactionsCount(user?.id || 0) }} concluídas
+              💼 {{ completedTransactionsCount }} concluídas
             </span>
           </span>
         </div>
@@ -58,9 +58,9 @@
       <div class="kpi-card">
         <div class="kpi-icon-bubble green"><mat-icon>payments</mat-icon></div>
         <div class="kpi-data">
-          <span class="kpi-label">Vendas do Mês</span>
-          <h3 class="kpi-value">124.500 MT</h3>
-          <span class="kpi-trend positive"><mat-icon>arrow_upward</mat-icon> +12% vs. mês ant.</span>
+          <span class="kpi-label">Vendas Totais</span>
+          <h3 class="kpi-value">{{ produtorSales | number:'1.0-2' }} MT</h3>
+          <span class="kpi-trend positive"><mat-icon>verified</mat-icon> {{ completedTransactionsCount }} concluídas</span>
         </div>
       </div>
       <div class="kpi-card">
@@ -68,15 +68,15 @@
         <div class="kpi-data">
           <span class="kpi-label">Ofertas Ativas</span>
           <h3 class="kpi-value">{{ produtorOffers.length }}</h3>
-          <span class="kpi-trend neutro">Prontas para venda</span>
+          <span class="kpi-trend neutro">Disponíveis no mercado</span>
         </div>
       </div>
       <div class="kpi-card">
         <div class="kpi-icon-bubble blue"><mat-icon>forum</mat-icon></div>
         <div class="kpi-data">
-          <span class="kpi-label">Negociações Abertas</span>
-          <h3 class="kpi-value">{{ buyerProposals.length }}</h3>
-          <span class="kpi-trend positive">2 novas propostas</span>
+          <span class="kpi-label">Negociações Recebidas</span>
+          <h3 class="kpi-value">{{ receivedInterests.length }}</h3>
+          <span class="kpi-trend positive">{{ buyerProposals.length }} propostas directas</span>
         </div>
       </div>
     }
@@ -87,8 +87,8 @@
         <div class="kpi-icon-bubble orange"><mat-icon>shopping_cart</mat-icon></div>
         <div class="kpi-data">
           <span class="kpi-label">Total Adquirido</span>
-          <h3 class="kpi-value">340.000 MT</h3>
-          <span class="kpi-trend positive"><mat-icon>arrow_upward</mat-icon> 18.5 Toneladas</span>
+          <h3 class="kpi-value">{{ compradorTotalAcquired | number:'1.0-2' }} MT</h3>
+          <span class="kpi-trend positive"><mat-icon>verified</mat-icon> {{ completedTransactionsCount }} compras</span>
         </div>
       </div>
       <div class="kpi-card">
@@ -96,15 +96,15 @@
         <div class="kpi-data">
           <span class="kpi-label">Cotações Abertas</span>
           <h3 class="kpi-value">{{ myPurchaseRequests.length }}</h3>
-          <span class="kpi-trend active">Aguardando lances</span>
+          <span class="kpi-trend active">Necessidades publicadas</span>
         </div>
       </div>
       <div class="kpi-card">
         <div class="kpi-icon-bubble blue"><mat-icon>groups</mat-icon></div>
         <div class="kpi-data">
           <span class="kpi-label">Produtores Parceiros</span>
-          <h3 class="kpi-value">8</h3>
-          <span class="kpi-trend positive">2 novos este mês</span>
+          <h3 class="kpi-value">{{ compradorUniquePartnersCount }}</h3>
+          <span class="kpi-trend positive">Machambas contactadas</span>
         </div>
       </div>
     }
@@ -115,16 +115,16 @@
         <div class="kpi-icon-bubble blue"><mat-icon>account_balance</mat-icon></div>
         <div class="kpi-data">
           <span class="kpi-label">Capital Alocado</span>
-          <h3 class="kpi-value">650.000 MT</h3>
-          <span class="kpi-trend positive">Disponível: 350.000 MT</span>
+          <h3 class="kpi-value">{{ investidorCapitalAlocado | number:'1.0-2' }} MT</h3>
+          <span class="kpi-trend positive">Total investido em machambas</span>
         </div>
       </div>
       <div class="kpi-card">
         <div class="kpi-icon-bubble green"><mat-icon>trending_up</mat-icon></div>
         <div class="kpi-data">
           <span class="kpi-label">Retorno Médio</span>
-          <h3 class="kpi-value">+14.2%</h3>
-          <span class="kpi-trend positive">Acima da média SIMA</span>
+          <h3 class="kpi-value">{{ investidorRetornoMedio }}</h3>
+          <span class="kpi-trend positive">De acordo com o progresso</span>
         </div>
       </div>
       <div class="kpi-card">
@@ -132,7 +132,7 @@
         <div class="kpi-data">
           <span class="kpi-label">Projetos Financiados</span>
           <h3 class="kpi-value">{{ investedProjects.length }}</h3>
-          <span class="kpi-trend active">Cultura em progresso</span>
+          <span class="kpi-trend active">Culturas activas</span>
         </div>
       </div>
     }

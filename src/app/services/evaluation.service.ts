@@ -1,12 +1,13 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { AuthService } from './auth.service';
+import { SupabaseService } from './supabase.service';
 
 export interface Evaluation {
-  id: number;
-  interestId: number;
-  fromUserId: number;
+  id: string | number;
+  interestId: string | number;
+  fromUserId: string | number;
   fromUserName: string;
-  toUserId: number;
+  toUserId: string | number;
   toUserName: string;
   rating: number; // 1 a 5 estrelas
   comentario?: string;
@@ -19,186 +20,145 @@ export interface Evaluation {
   providedIn: 'root'
 })
 export class EvaluationService {
-  private readonly EVALUATIONS_KEY = 'alvorfield_evaluations';
+  private supabaseService = inject(SupabaseService);
+  private authService = inject(AuthService);
 
-  constructor(private authService: AuthService) {
-    this.initializeMockEvaluations();
-  }
-
-  private getEvaluations(): Evaluation[] {
-    const data = localStorage.getItem(this.EVALUATIONS_KEY);
-    return data ? JSON.parse(data) : [];
-  }
-
-  private saveEvaluations(evaluations: Evaluation[]): void {
-    localStorage.setItem(this.EVALUATIONS_KEY, JSON.stringify(evaluations));
-  }
-
-  private initializeMockEvaluations(): void {
-    const existing = localStorage.getItem(this.EVALUATIONS_KEY);
-    if (!existing) {
-      // Mock de avaliações iniciais para os utilizadores Mateus Tembe (ID 1) e Lúcia Maputo (ID 2)
-      const mockEvaluations: Evaluation[] = [
-        {
-          id: 2001,
-          interestId: 999,
-          fromUserId: 2, // Lúcia Maputo
-          fromUserName: 'Lúcia Maputo',
-          toUserId: 1, // Mateus Tembe
-          toUserName: 'Mateus Tembe',
-          rating: 5,
-          comentario: 'Excelente qualidade dos tomates. Entrega muito rápida e o Mateus foi muito profissional.',
-          dataCriacao: Date.now() - 15 * 24 * 60 * 60 * 1000,
-          denunciada: false
-        },
-        {
-          id: 2002,
-          interestId: 998,
-          fromUserId: 3, // AgroInvest
-          fromUserName: 'AgroInvest Moçambique',
-          toUserId: 1, // Mateus Tembe
-          toUserName: 'Mateus Tembe',
-          rating: 4,
-          comentario: 'Muito empenhado e responde rápido às solicitações de relatórios da machamba.',
-          dataCriacao: Date.now() - 30 * 24 * 60 * 60 * 1000,
-          denunciada: false
-        },
-        {
-          id: 2003,
-          interestId: 997,
-          fromUserId: 1, // Mateus Tembe
-          fromUserName: 'Mateus Tembe',
-          toUserId: 2, // Lúcia Maputo
-          toUserName: 'Lúcia Maputo',
-          rating: 5,
-          comentario: 'Compradora super séria. Fez o pagamento conforme o acordado na entrega.',
-          dataCriacao: Date.now() - 15 * 24 * 60 * 60 * 1000,
-          denunciada: false
-        }
-      ];
-      this.saveEvaluations(mockEvaluations);
-    }
+  private mapRecordToEvaluation(record: any): Evaluation {
+    return {
+      id: record.id,
+      interestId: record.interest_id,
+      fromUserId: record.reviewer_id,
+      fromUserName: record.reviewer?.full_name || 'Comprador/Produtor',
+      toUserId: record.reviewee_id,
+      toUserName: record.reviewee?.full_name || 'Destinatário',
+      rating: Number(record.rating),
+      comentario: record.comment || undefined,
+      dataCriacao: new Date(record.created_at).getTime(),
+      denunciada: record.approved === false, // Se foi ocultada/denunciada
+      motivoDenuncia: undefined // Opcional
+    };
   }
 
   // RF-40: Criar avaliação
-  createEvaluation(
-    interestId: number,
-    fromUserId: number,
+  async createEvaluation(
+    interestId: string | number,
+    fromUserId: string | number,
     fromUserName: string,
-    toUserId: number,
+    toUserId: string | number,
     toUserName: string,
     rating: number,
     comentario?: string
-  ): Evaluation {
-    const newEval: Evaluation = {
-      id: Date.now(),
-      interestId,
-      fromUserId,
-      fromUserName,
-      toUserId,
-      toUserName,
-      rating: Math.max(1, Math.min(5, rating)),
-      comentario,
-      dataCriacao: Date.now(),
-      denunciada: false
-    };
+  ): Promise<Evaluation> {
+    const { data: record, error } = await this.supabaseService.client
+      .from('reviews')
+      .insert({
+        interest_id: interestId,
+        reviewer_id: fromUserId,
+        reviewee_id: toUserId,
+        rating: Math.max(1, Math.min(5, rating)),
+        comment: comentario || null,
+        approved: true
+      })
+      .select('*, reviewer:profiles!reviewer_id(full_name), reviewee:profiles!reviewee_id(full_name)')
+      .single();
 
-    const evals = this.getEvaluations();
-    evals.unshift(newEval);
-    this.saveEvaluations(evals);
+    if (error || !record) throw new Error(error?.message || 'Erro ao criar avaliação no Supabase.');
 
-    // Forçar a sincronização de reputações nas listagens locais
-    this.syncUserReputations();
+    // Recalcular e atualizar a pontuação de reputação média do perfil no banco
+    const reputation = await this.getUserReputation(toUserId);
+    await this.supabaseService.client
+      .from('profiles')
+      .update({ reputation_score: reputation.average })
+      .eq('id', toUserId);
 
-    return newEval;
+    return this.mapRecordToEvaluation(record);
   }
 
   // RF-42: Obter avaliações recebidas por um utilizador
-  getEvaluationsForUser(userId: number): Evaluation[] {
-    return this.getEvaluations().filter(e => e.toUserId === userId);
+  async getEvaluationsForUser(userId: string | number): Promise<Evaluation[]> {
+    const { data, error } = await this.supabaseService.client
+      .from('reviews')
+      .select('*, reviewer:profiles!reviewer_id(full_name), reviewee:profiles!reviewee_id(full_name)')
+      .eq('reviewee_id', userId)
+      .eq('approved', true)
+      .order('created_at', { ascending: false });
+
+    if (error || !data) return [];
+    return data.map(r => this.mapRecordToEvaluation(r));
   }
 
   // RF-42: Calcular reputação média (média de estrelas e total)
-  getUserReputation(userId: number): { average: number; total: number } {
-    const evals = this.getEvaluationsForUser(userId);
-    if (evals.length === 0) {
-      return { average: 5.0, total: 0 }; // Reputação inicial padrão de 5 estrelas
+  async getUserReputation(userId: string | number): Promise<{ average: number; total: number }> {
+    const { data, error } = await this.supabaseService.client
+      .from('reviews')
+      .select('rating')
+      .eq('reviewee_id', userId)
+      .eq('approved', true);
+
+    if (error || !data || data.length === 0) {
+      return { average: 5.0, total: 0 };
     }
-    const sum = evals.reduce((acc, curr) => acc + curr.rating, 0);
+
+    const sum = data.reduce((acc, curr) => acc + Number(curr.rating), 0);
     return {
-      average: Number((sum / evals.length).toFixed(1)),
-      total: evals.length
+      average: Number((sum / data.length).toFixed(1)),
+      total: data.length
     };
   }
 
   // RF-43: Contar total de transações concluídas do produtor ou comprador
-  getCompletedTransactionsCount(userId: number): number {
-    const interestsData = localStorage.getItem('alvorfield_interests');
-    if (!interestsData) return 0;
-    try {
-      const interests: any[] = JSON.parse(interestsData);
-      return interests.filter(i => 
-        (i.produtorId === userId || i.compradorId === userId) &&
-        i.compradorConfirmou === true && 
-        i.produtorConfirmou === true
-      ).length;
-    } catch (e) {
-      return 0;
-    }
+  async getCompletedTransactionsCount(userId: string | number): Promise<number> {
+    const { count, error } = await this.supabaseService.client
+      .from('interests')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'completed')
+      .or(`buyer_id.eq.${userId},offers.producer_id.eq.${userId}`);
+
+    if (error) return 0;
+    return count || 0;
   }
 
   // RF-44: Denunciar avaliação
-  reportEvaluation(evaluationId: number, reason: string): void {
-    const evals = this.getEvaluations();
-    const index = evals.findIndex(e => e.id === evaluationId);
-    if (index !== -1) {
-      evals[index].denunciada = true;
-      evals[index].motivoDenuncia = reason;
-      this.saveEvaluations(evals);
-      console.info(`[DENÚNCIA]: Avaliação ${evaluationId} foi marcada como denunciada. Motivo: ${reason}`);
-    }
+  async reportEvaluation(evaluationId: string | number, reason: string): Promise<void> {
+    // Definimos aprovado como false para ocultar na moderação administrativa
+    const { error } = await this.supabaseService.client
+      .from('reviews')
+      .update({ approved: false })
+      .eq('id', evaluationId);
+
+    if (error) throw new Error(error.message);
   }
 
-  // RF-44: Administrador - Listar todas as avaliações denunciadas
-  getReportedEvaluations(): Evaluation[] {
-    return this.getEvaluations().filter(e => e.denunciada);
+  // RF-44: Administrador - Listar todas as avaliações denunciadas/não aprovadas
+  async getReportedEvaluations(): Promise<Evaluation[]> {
+    const { data, error } = await this.supabaseService.client
+      .from('reviews')
+      .select('*, reviewer:profiles!reviewer_id(full_name), reviewee:profiles!reviewee_id(full_name)')
+      .eq('approved', false)
+      .order('created_at', { ascending: false });
+
+    if (error || !data) return [];
+    return data.map(r => this.mapRecordToEvaluation(r));
   }
 
   // RF-44: Administrador - Listar todas as avaliações no sistema
-  getAllEvaluations(): Evaluation[] {
-    return this.getEvaluations();
+  async getAllEvaluations(): Promise<Evaluation[]> {
+    const { data, error } = await this.supabaseService.client
+      .from('reviews')
+      .select('*, reviewer:profiles!reviewer_id(full_name), reviewee:profiles!reviewee_id(full_name)')
+      .order('created_at', { ascending: false });
+
+    if (error || !data) return [];
+    return data.map(r => this.mapRecordToEvaluation(r));
   }
 
   // RF-44: Administrador - Remover avaliação
-  removeEvaluation(evaluationId: number): void {
-    let evals = this.getEvaluations();
-    evals = evals.filter(e => e.id !== evaluationId);
-    this.saveEvaluations(evals);
-    console.info(`[ADMIN]: Avaliação ${evaluationId} foi REMOVIDA do sistema.`);
-    this.syncUserReputations();
-  }
+  async removeEvaluation(evaluationId: string | number): Promise<void> {
+    const { error } = await this.supabaseService.client
+      .from('reviews')
+      .delete()
+      .eq('id', evaluationId);
 
-  // Sincroniza e atualiza o estado de reputação nas ofertas e utilizadores
-  private syncUserReputations(): void {
-    // Atualizar reputações nos dados de ofertas para fins de listagem pública rápida
-    const offersData = localStorage.getItem('alvorfield_offers');
-    if (offersData) {
-      try {
-        const offers: any[] = JSON.parse(offersData);
-        let updated = false;
-        offers.forEach(o => {
-          const rep = this.getUserReputation(o.produtorId);
-          const transCount = this.getCompletedTransactionsCount(o.produtorId) + (o.produtorId === 1 ? 14 : 5); // Fallback para manter consistência dos mock iniciais
-          if (o.produtorReputacao !== rep.average || o.produtorTransacoes !== transCount) {
-            o.produtorReputacao = rep.average;
-            o.produtorTransacoes = transCount;
-            updated = true;
-          }
-        });
-        if (updated) {
-          localStorage.setItem('alvorfield_offers', JSON.stringify(offers));
-        }
-      } catch (e) {}
-    }
+    if (error) throw new Error(error.message);
   }
 }

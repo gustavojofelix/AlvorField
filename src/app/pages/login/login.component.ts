@@ -102,7 +102,7 @@ export class LoginComponent implements OnInit, OnDestroy {
     }, 600);
   }
 
-  onSubmit(): void {
+  async onSubmit(): Promise<void> {
     if (this.loginForm.invalid) {
       this.loginForm.markAllAsTouched();
       return;
@@ -111,8 +111,8 @@ export class LoginComponent implements OnInit, OnDestroy {
     this.isLoading = true;
     const { telefone, password } = this.loginForm.value;
 
-    setTimeout(() => {
-      const result = this.auth.login(telefone!, password!);
+    try {
+      const result = await this.auth.login(telefone!, password!);
       this.isLoading = false;
       
       if (result.success) {
@@ -127,7 +127,10 @@ export class LoginComponent implements OnInit, OnDestroy {
           panelClass: ['snackbar-error']
         });
       }
-    }, 500);
+    } catch (e: any) {
+      this.isLoading = false;
+      this.snack.open('Erro ao tentar efectuar login.', 'Fechar', { duration: 4000 });
+    }
   }
 
   // FLUXO RECUPERAÇÃO DE SENHA (RF-10)
@@ -146,7 +149,7 @@ export class LoginComponent implements OnInit, OnDestroy {
     }
   }
 
-  solicitarRecoveryOTP(): void {
+  async solicitarRecoveryOTP(): Promise<void> {
     const telCtrl = this.recoveryForm.get('telefone');
     if (telCtrl?.invalid) {
       telCtrl.markAsTouched();
@@ -154,8 +157,7 @@ export class LoginComponent implements OnInit, OnDestroy {
     }
 
     const telefone = telCtrl?.value;
-    const users = this.auth.getUsers();
-    const userExists = users.some(u => u.telefone === telefone);
+    const userExists = await this.auth.checkPhoneExists(telefone);
 
     if (!userExists) {
       this.snack.open('Este número de telefone não está registado.', 'Fechar', { duration: 4000, panelClass: ['snackbar-error'] });
@@ -198,7 +200,7 @@ export class LoginComponent implements OnInit, OnDestroy {
     return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
   }
 
-  confirmarRedefinicao(): void {
+  async confirmarRedefinicao(): Promise<void> {
     if (this.recoveryForm.invalid) {
       this.recoveryForm.markAllAsTouched();
       return;
@@ -213,8 +215,8 @@ export class LoginComponent implements OnInit, OnDestroy {
     }
 
     this.isLoading = true;
-    setTimeout(() => {
-      const result = this.auth.redefinirPassword(telefone, newPassword);
+    try {
+      const result = await this.auth.redefinirPassword(telefone, newPassword);
       this.isLoading = false;
       
       if (result.success) {
@@ -226,6 +228,9 @@ export class LoginComponent implements OnInit, OnDestroy {
       } else {
         this.snack.open(result.message, 'Fechar', { duration: 4000, panelClass: ['snackbar-error'] });
       }
-    }, 600);
+    } catch (e: any) {
+      this.isLoading = false;
+      this.snack.open('Erro ao redefinir password.', 'Fechar', { duration: 4000 });
+    }
   }
 }

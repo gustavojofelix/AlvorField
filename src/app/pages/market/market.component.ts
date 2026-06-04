@@ -74,7 +74,7 @@ export class MarketComponent implements OnInit {
   districtsList: string[] = [];
   productsList: string[] = [];
   availableOffers: Offer[] = [];
-  favorites: number[] = [];
+  favorites: Array<string | number> = [];
   activeAlerts: CustomAlert[] = [];
 
   // User location (defaults to Maputo unless permission is allowed)
@@ -124,7 +124,7 @@ export class MarketComponent implements OnInit {
     private snack: MatSnackBar
   ) {}
 
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
     // Apenas compradores podem ver esta página
     const user = this.authService.getCurrentUser();
     if (!user || user.tipo !== 'Comprador') {
@@ -133,30 +133,30 @@ export class MarketComponent implements OnInit {
       return;
     }
 
-    this.productsList = this.offerService.PREDEFINED_PRODUCTS;
+    this.productsList = await this.offerService.getPredefinedProducts();
     this.provincesList = this.locationService.getProvinces();
     this.provincias = ['Todas', ...this.provincesList.map(p => p.nome)];
     
     // Tentar ler a geolocalização automaticamente
     this.obterLocalizacaoComprador(false);
 
-    this.loadOffers();
+    await this.loadOffers();
     this.loadFavorites();
     this.loadAlerts();
   }
 
-  loadOffers(): void {
-    this.availableOffers = this.offerService.getPublicOffers();
+  async loadOffers(): Promise<void> {
+    this.availableOffers = await this.offerService.getPublicOffers();
   }
 
   loadFavorites(): void {
-    const favs = localStorage.getItem('alvorfield_favorites');
-    this.favorites = favs ? JSON.parse(favs) : [];
+    const user = this.authService.getCurrentUser();
+    this.favorites = user?.preferences?.favorites || [];
   }
 
   loadAlerts(): void {
-    const alerts = localStorage.getItem('alvorfield_alerts');
-    this.activeAlerts = alerts ? JSON.parse(alerts) : [];
+    const user = this.authService.getCurrentUser();
+    this.activeAlerts = user?.preferences?.alerts || [];
   }
 
   obterLocalizacaoComprador(exibirFeedback = true): void {
@@ -312,21 +312,21 @@ export class MarketComponent implements OnInit {
   }
 
   // Favoritos (RF-29)
-  isFavorite(offerId: number): boolean {
-    return this.favorites.includes(offerId);
+  isFavorite(offerId: string | number): boolean {
+    return this.favorites.includes(offerId as any);
   }
 
-  toggleFavorite(offerId: number, event?: Event): void {
+  async toggleFavorite(offerId: string | number, event?: Event): Promise<void> {
     if (event) event.stopPropagation();
-    const idx = this.favorites.indexOf(offerId);
+    const idx = this.favorites.indexOf(offerId as any);
     if (idx > -1) {
       this.favorites.splice(idx, 1);
       this.snack.open('Oferta removida dos favoritos.', 'OK', { duration: 2000 });
     } else {
-      this.favorites.push(offerId);
+      this.favorites.push(offerId as any);
       this.snack.open('Oferta guardada nos favoritos!', 'Excelente', { duration: 2000 });
     }
-    localStorage.setItem('alvorfield_favorites', JSON.stringify(this.favorites));
+    await this.authService.updatePreferences('favorites', this.favorites);
   }
 
   // Detalhe da Oferta (RF-28)
@@ -349,7 +349,7 @@ export class MarketComponent implements OnInit {
     this.showInterestModal = true;
   }
 
-  submitInterest(): void {
+  async submitInterest(): Promise<void> {
     if (!this.selectedOffer) return;
 
     if (!this.interestForm.message || this.interestForm.message.trim().length < 10) {
@@ -358,7 +358,7 @@ export class MarketComponent implements OnInit {
     }
 
     try {
-      this.interestService.createInterest(
+      await this.interestService.createInterest(
         this.selectedOffer,
         this.interestForm.message,
         this.interestForm.quantity
@@ -386,16 +386,14 @@ export class MarketComponent implements OnInit {
     this.showBidModal = true;
   }
 
-  submitBid(): void {
+  async submitBid(): Promise<void> {
     if (!this.selectedOffer || !this.newBid.preco || !this.newBid.quantidade) {
       this.snack.open('Preencha os campos de preço e volume.', 'OK', { duration: 3000 });
       return;
     }
 
-    const localProposals = localStorage.getItem('alvor_buyer_proposals');
-    const proposalsList = localProposals ? JSON.parse(localProposals) : [];
-    
     const user = this.authService.getCurrentUser();
+    const proposalsList = user?.preferences?.buyer_proposals || [];
     
     proposalsList.unshift({
       id: Date.now(),
@@ -406,7 +404,7 @@ export class MarketComponent implements OnInit {
       status: 'Pendente'
     });
     
-    localStorage.setItem('alvor_buyer_proposals', JSON.stringify(proposalsList));
+    await this.authService.updatePreferences('buyer_proposals', proposalsList);
 
     this.snack.open(`Proposta enviada com sucesso para ${this.selectedOffer.produtorNome}!`, 'Excelente', {
       duration: 4000,
@@ -431,7 +429,7 @@ export class MarketComponent implements OnInit {
     this.showAlertModal = true;
   }
 
-  createAlert(): void {
+  async createAlert(): Promise<void> {
     if (!this.alertForm.produto) {
       this.snack.open('Indique o produto para o alerta.', 'OK', { duration: 3000 });
       return;
@@ -450,22 +448,21 @@ export class MarketComponent implements OnInit {
     };
 
     this.activeAlerts.unshift(newAlert);
-    localStorage.setItem('alvorfield_alerts', JSON.stringify(this.activeAlerts));
+    await this.authService.updatePreferences('alerts', this.activeAlerts);
 
     this.snack.open(`Alerta de cotação para "${newAlert.produto}" ativado com sucesso!`, 'Excelente', {
       duration: 3500,
       panelClass: ['snackbar-success']
     });
 
-    // Simular que o alerta funciona enviando SMS/App no console
     console.info(`[ALERTA REGISTADO] Alerta #${newAlert.id} configurado para ${newAlert.produto}. Canais: App=${newAlert.canais.app}, SMS=${newAlert.canais.sms}`);
 
     this.showAlertModal = false;
   }
 
-  removeAlert(alertId: number): void {
+  async removeAlert(alertId: number): Promise<void> {
     this.activeAlerts = this.activeAlerts.filter(a => a.id !== alertId);
-    localStorage.setItem('alvorfield_alerts', JSON.stringify(this.activeAlerts));
+    await this.authService.updatePreferences('alerts', this.activeAlerts);
     this.snack.open('Alerta removido.', 'OK', { duration: 2500 });
   }
 

@@ -34,8 +34,8 @@ export class NotificationSimulatorComponent implements OnInit, OnDestroy {
 
   constructor(private notificationService: NotificationService) {}
 
-  ngOnInit(): void {
-    this.loadNotifications();
+  async ngOnInit(): Promise<void> {
+    await this.loadNotifications();
     this.checkBrowserPermission();
 
     // Ouvir novas notificações em tempo real
@@ -62,8 +62,8 @@ export class NotificationSimulatorComponent implements OnInit, OnDestroy {
     }
   }
 
-  loadNotifications(): void {
-    this.notifications = this.notificationService.getNotifications();
+  async loadNotifications(): Promise<void> {
+    this.notifications = await this.notificationService.getNotifications();
   }
 
   togglePanel(): void {
@@ -99,8 +99,8 @@ export class NotificationSimulatorComponent implements OnInit, OnDestroy {
     this.selectedEmail = email;
   }
 
-  clearAll(): void {
-    this.notificationService.clearNotifications();
+  async clearAll(): Promise<void> {
+    await this.notificationService.clearNotifications();
     this.notifications = [];
     this.selectedEmail = null;
     this.unreadCount = 0;
