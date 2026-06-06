@@ -1,7 +1,8 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { Subscription } from 'rxjs';
 import { AuthService, User } from '../../services/auth.service';
 import { LocationService, Province } from '../../services/location.service';
 import { OfferService, Offer, OfferStatus } from '../../services/offer.service';
@@ -97,9 +98,11 @@ interface InvestedProject {
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss',
 })
-export class DashboardComponent implements OnInit {
+export class DashboardComponent implements OnInit, OnDestroy {
   protected readonly Math = Math;
   user: Omit<User, 'password'> | null = null;
+  loadingListings = false;
+  private authSubscription?: Subscription;
   greeting = '';
 
   // Modais de Simulação
@@ -312,49 +315,54 @@ export class DashboardComponent implements OnInit {
     return `+${((totalRetorno / totalInvestido) * 100).toFixed(1)}%`;
   }
 
-  async ngOnInit(): Promise<void> {
-    this.user = this.authService.getCurrentUser();
+  ngOnInit(): void {
     this.setGreeting();
-    this.setDashboardCards();
     this.provincesList = this.locationService.getProvinces();
     
-    try {
-      this.productsList = await this.offerService.getPredefinedProducts();
-    } catch (e) {
+    this.offerService.getPredefinedProducts().then(prods => {
+      this.productsList = prods;
+    }).catch(e => {
       console.error('Erro ao carregar produtos predefinidos:', e);
       this.productsList = [
         'Milho Branco', 'Feijão Nhemba', 'Feijão Manteiga', 'Gergelim',
         'Castanha de Caju', 'Manga', 'Mandioca', 'Amendoim',
         'Batata Doce', 'Tomate', 'Cebola Vermelha'
       ];
-    }
+    });
 
-    this.loadMockData();
+    this.authSubscription = this.authService.currentUser$.subscribe(async (user) => {
+      if (user) {
+        this.user = user;
+        this.setDashboardCards();
+        this.loadMockData();
 
-    try {
-      await this.loadOffers();
-    } catch (e) {
-      console.error('Erro ao carregar ofertas:', e);
-    }
+        this.loadingListings = true;
+        this.cdr.detectChanges();
 
-    try {
-      await this.loadInterests();
-    } catch (e) {
-      console.error('Erro ao carregar interesses:', e);
-    }
+        try {
+          await Promise.all([
+            this.loadOffers(),
+            this.loadInterests(),
+            this.loadAdminData(),
+            this.loadUserReputation()
+          ]);
+        } catch (e) {
+          console.error('Erro ao carregar dados do dashboard:', e);
+        } finally {
+          this.loadingListings = false;
+          this.cdr.detectChanges();
+        }
+      } else {
+        this.user = null;
+        this.cdr.detectChanges();
+      }
+    });
+  }
 
-    try {
-      await this.loadAdminData();
-    } catch (e) {
-      console.error('Erro ao carregar dados admin:', e);
+  ngOnDestroy(): void {
+    if (this.authSubscription) {
+      this.authSubscription.unsubscribe();
     }
-
-    try {
-      await this.loadUserReputation();
-    } catch (e) {
-      console.error('Erro ao carregar reputação:', e);
-    }
-    this.cdr.detectChanges();
   }
 
   async loadUserReputation(): Promise<void> {
@@ -747,37 +755,101 @@ export class DashboardComponent implements OnInit {
     await this.loadOffers();
   }
 
-  acceptProposal(proposal: BuyerProposal): void {
-    proposal.status = 'Aceito';
-    localStorage.setItem('alvor_buyer_proposals', JSON.stringify(this.buyerProposals));
+  async acceptProposal(proposal: BuyerProposal): Promise<void> {
+    try {
+      await this.interestService.acceptInterest(proposal.id);
+      
+      // Adicionar conexões recentes simuladas
+      this.connections.unshift({
+        produtor: this.user?.nome || 'Eu',
+        consumidor: proposal.comprador,
+        distrito: `${this.user?.distrito} → Maputo`,
+        produto: proposal.produto,
+        quantidade: proposal.quantidade,
+        status: 'Concluído',
+        timestamp: 'Agora mesmo'
+      });
 
-    // Adicionar conexões recentes simuladas
-    this.connections.unshift({
-      produtor: this.user?.nome || 'Eu',
-      consumidor: proposal.comprador,
-      distrito: `${this.user?.distrito} → Maputo`,
-      produto: proposal.produto,
-      quantidade: proposal.quantidade,
-      status: 'Concluído',
-      timestamp: 'Agora mesmo'
-    });
+      this.snack.open(`Proposta da ${proposal.comprador} ACEITA com sucesso! Contrato de compra gerado.`, 'Fixe', {
+        duration: 4000,
+        panelClass: ['snackbar-success']
+      });
 
-    this.snack.open(`Proposta da ${proposal.comprador} ACEITA com sucesso! Contrato de compra simulado gerado.`, 'Fixe', {
-      duration: 4000,
-      panelClass: ['snackbar-success']
-    });
+      await this.loadInterests();
+      this.cdr.detectChanges();
+    } catch (e: any) {
+      this.snack.open(e.message || 'Erro ao aceitar proposta.', 'OK', { duration: 3000 });
+    }
   }
 
-  declineProposal(proposal: BuyerProposal): void {
-    proposal.status = 'Recusado';
-    localStorage.setItem('alvor_buyer_proposals', JSON.stringify(this.buyerProposals));
-    this.snack.open(`Proposta da ${proposal.comprador} recusada.`, 'OK', { duration: 3000 });
+  async declineProposal(proposal: BuyerProposal): Promise<void> {
+    try {
+      await this.interestService.refuseInterest(proposal.id);
+      this.snack.open(`Proposta da ${proposal.comprador} recusada.`, 'OK', { duration: 3000 });
+      await this.loadInterests();
+      this.cdr.detectChanges();
+    } catch (e: any) {
+      this.snack.open(e.message || 'Erro ao recusar proposta.', 'OK', { duration: 3000 });
+    }
   }
 
   async loadInterests(): Promise<void> {
     if (!this.user) return;
-    this.receivedInterests = await this.interestService.getReceivedInterests(this.user.id);
-    this.sentInterests = await this.interestService.getSentInterests(this.user.id);
+    const allReceived = await this.interestService.getReceivedInterests(this.user.id);
+    
+    // Filtramos os interesses comuns (sem a mensagem padrão de Proposta Directa)
+    this.receivedInterests = allReceived.filter(i => i.mensagem !== 'Proposta directa de preço/quantidade.');
+    
+    // Mapeamos as propostas directas (com a mensagem padrão) para o array de buyerProposals do produtor
+    const directBids = allReceived.filter(i => i.mensagem === 'Proposta directa de preço/quantidade.');
+    this.buyerProposals = directBids.map(i => ({
+      id: i.id as any,
+      comprador: i.compradorNome,
+      produto: i.produto,
+      quantidade: `${i.quantidadePretendida} ${i.unidade}`,
+      precoOferecido: `${i.precoProposto} MT/Kg`,
+      status: i.status === 'Pendente' ? 'Pendente' : (i.status === 'Aceite' || i.status === 'Concluido' ? 'Aceito' : 'Recusado')
+    }));
+
+    if (this.user.tipo === 'Comprador') {
+      const allSent = await this.interestService.getSentInterests(this.user.id);
+      this.sentInterests = allSent;
+      
+      const mySentBids = allSent.filter(i => i.mensagem === 'Proposta directa de preço/quantidade.');
+      this.buyerProposals = mySentBids.map(i => ({
+        id: i.id as any,
+        comprador: i.produtorNome,
+        produto: i.produto,
+        quantidade: `${i.quantidadePretendida} ${i.unidade}`,
+        precoOferecido: `${i.precoProposto} MT/Kg`,
+        status: i.status === 'Pendente' ? 'Pendente' : (i.status === 'Aceite' || i.status === 'Concluido' ? 'Aceito' : 'Recusado')
+      }));
+    } else {
+      this.sentInterests = await this.interestService.getSentInterests(this.user.id);
+    }
+  }
+
+  async refreshDashboardData(): Promise<void> {
+    try {
+      this.loadingListings = true;
+      this.cdr.detectChanges();
+      
+      await Promise.all([
+        this.loadOffers(),
+        this.loadInterests(),
+        this.loadAdminData()
+      ]);
+      
+      this.snack.open('Dados actualizados do Supabase com sucesso!', 'OK', {
+        duration: 3000,
+        panelClass: ['snackbar-success']
+      });
+    } catch (e: any) {
+      this.snack.open('Erro ao actualizar os dados: ' + (e.message || e), 'Erro', { duration: 3000 });
+    } finally {
+      this.loadingListings = false;
+      this.cdr.detectChanges();
+    }
   }
 
   async acceptInterest(interest: Interest): Promise<void> {
@@ -832,31 +904,35 @@ export class DashboardComponent implements OnInit {
     this.showBidModal = true;
   }
 
-  submitBid(): void {
+  async submitBid(): Promise<void> {
     if (!this.selectedOfferForBid || !this.newBid.preco || !this.newBid.quantidade) return;
 
-    this.snack.open(`Proposta de ${this.newBid.preco} MT/Kg para ${this.selectedOfferForBid.produtorNome} enviada!`, 'Sucesso', {
-      duration: 3500,
-      panelClass: ['snackbar-success']
-    });
+    try {
+      const parsedQty = parseFloat(this.newBid.quantidade);
+      const qtyNum = isNaN(parsedQty) ? this.selectedOfferForBid.quantidade : parsedQty;
 
-    const localProposals = localStorage.getItem('alvor_buyer_proposals');
-    const proposalsList: BuyerProposal[] = localProposals ? JSON.parse(localProposals) : [];
-    proposalsList.unshift({
-      id: Date.now(),
-      comprador: this.user?.nome || 'Comprador Corporativo',
-      produto: this.selectedOfferForBid.produto,
-      quantidade: this.newBid.quantidade,
-      precoOferecido: `${this.newBid.preco} MT/Kg`,
-      status: 'Pendente'
-    });
-    localStorage.setItem('alvor_buyer_proposals', JSON.stringify(proposalsList));
+      await this.interestService.createInterest(
+        this.selectedOfferForBid,
+        'Proposta directa de preço/quantidade.',
+        qtyNum,
+        Number(this.newBid.preco)
+      );
 
-    this.showBidModal = false;
-    this.selectedOfferForBid = null;
+      this.snack.open(`Proposta de ${this.newBid.preco} MT/Kg para ${this.selectedOfferForBid.produtorNome} enviada!`, 'Sucesso', {
+        duration: 3500,
+        panelClass: ['snackbar-success']
+      });
+
+      await this.loadInterests();
+      this.showBidModal = false;
+      this.selectedOfferForBid = null;
+      this.cdr.detectChanges();
+    } catch (e: any) {
+      this.snack.open(e.message || 'Erro ao enviar proposta.', 'OK', { duration: 3000 });
+    }
   }
 
-  publishPurchaseRequest(): void {
+  async publishPurchaseRequest(): Promise<void> {
     if (!this.newRequest.produto || !this.newRequest.quantidade || !this.newRequest.precoMaximo) {
       this.snack.open('Por favor, preencha todos os campos.', 'OK', { duration: 3000, panelClass: ['snackbar-error'] });
       return;
@@ -872,15 +948,21 @@ export class DashboardComponent implements OnInit {
     };
 
     this.myPurchaseRequests.unshift(req);
-    localStorage.setItem('alvor_purchase_requests', JSON.stringify(this.myPurchaseRequests));
-
-    this.snack.open('Pedido de cotação publicado para todos os produtores!', 'Excelente', {
-      duration: 3000,
-      panelClass: ['snackbar-success']
-    });
+    
+    try {
+      await this.authService.updatePreferences('purchase_requests', this.myPurchaseRequests);
+      
+      this.snack.open('Pedido de cotação publicado para todos os produtores!', 'Excelente', {
+        duration: 3000,
+        panelClass: ['snackbar-success']
+      });
+    } catch (e: any) {
+      this.snack.open('Erro ao guardar pedido de cotação no Supabase.', 'OK', { duration: 3000 });
+    }
 
     this.newRequest = { produto: '', quantidade: '', precoMaximo: '' };
     this.showRequestModal = false;
+    this.cdr.detectChanges();
   }
 
   // ==========================================
@@ -892,38 +974,44 @@ export class DashboardComponent implements OnInit {
     this.showInvestModal = true;
   }
 
-  submitInvestment(): void {
+  async submitInvestment(): Promise<void> {
     if (!this.selectedProjectForInvestment || this.investAmount <= 0) return;
 
     const proj = this.investmentProjects.find(p => p.id === this.selectedProjectForInvestment!.id);
     if (proj) {
       proj.valorArrecadado += Number(this.investAmount);
-      localStorage.setItem('alvor_invest_projects', JSON.stringify(this.investmentProjects));
+      
+      try {
+        await this.authService.updatePreferences('invest_projects', this.investmentProjects);
 
-      const existing = this.investedProjects.find(ip => ip.id === proj.id);
-      if (existing) {
-        existing.investido += Number(this.investAmount);
-      } else {
-        this.investedProjects.unshift({
-          id: proj.id,
-          titulo: proj.titulo,
-          investido: Number(this.investAmount),
-          retornoAcumulado: 0,
-          progressoCultura: 10,
-          estagioCultura: 'Sementeira iniciada',
-          previsaoColheita: 'Setembro 2026'
+        const existing = this.investedProjects.find(ip => ip.id === proj.id);
+        if (existing) {
+          existing.investido += Number(this.investAmount);
+        } else {
+          this.investedProjects.unshift({
+            id: proj.id,
+            titulo: proj.titulo,
+            investido: Number(this.investAmount),
+            retornoAcumulado: 0,
+            progressoCultura: 10,
+            estagioCultura: 'Sementeira iniciada',
+            previsaoColheita: 'Setembro 2026'
+          });
+        }
+        await this.authService.updatePreferences('invested_projects', this.investedProjects);
+
+        this.snack.open(`Investimento de ${Number(this.investAmount).toLocaleString()} MT em "${proj.titulo}" realizado com sucesso!`, 'Obrigado', {
+          duration: 4000,
+          panelClass: ['snackbar-success']
         });
+      } catch (e: any) {
+        this.snack.open('Erro ao guardar investimento no Supabase.', 'OK', { duration: 3000 });
       }
-      localStorage.setItem('alvor_invested_projects', JSON.stringify(this.investedProjects));
-
-      this.snack.open(`Investimento de ${Number(this.investAmount).toLocaleString()} MT em "${proj.titulo}" realizado com sucesso!`, 'Obrigado', {
-        duration: 4000,
-        panelClass: ['snackbar-success']
-      });
     }
 
     this.showInvestModal = false;
     this.selectedProjectForInvestment = null;
+    this.cdr.detectChanges();
   }
 
   get filteredPrices(): PriceTicker[] {

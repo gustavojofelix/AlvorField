@@ -239,14 +239,24 @@
         <!-- Minhas Ofertas Ativas -->
         <div class="section-container" id="ofertas-seccao">
           <div class="section-header">
-            <h3><mat-icon>agriculture</mat-icon> Minhas Ofertas de Colheita</h3>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <h3><mat-icon>agriculture</mat-icon> Minhas Ofertas de Colheita</h3>
+              <button mat-icon-button (click)="refreshDashboardData()" title="Actualizar Listagem" style="color: #475569;">
+                <mat-icon>refresh</mat-icon>
+              </button>
+            </div>
             <button mat-flat-button color="primary" (click)="abrirModalNovaOferta()">
               <mat-icon>add</mat-icon> Nova Oferta
             </button>
           </div>
 
           <div class="offers-table-card">
-            @if (produtorOffers.length === 0) {
+            @if (loadingListings) {
+              <div class="skeleton-loader">
+                <div class="skeleton-row shimmer"></div>
+                <div class="skeleton-row shimmer"></div>
+              </div>
+            } @else if (produtorOffers.length === 0) {
               <div class="empty-state">
                 <mat-icon>inventory_2</mat-icon>
                 <p>Nenhuma oferta registada. Publique a sua colheita para os compradores.</p>
@@ -317,12 +327,22 @@
 
         <!-- Propostas Recebidas de Compradores -->
         <div class="section-container" id="propostas-seccao">
-          <div class="section-header">
-            <h3><mat-icon>handshake</mat-icon> Propostas de Compradores</h3>
+          <div class="section-header" style="display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <h3><mat-icon>handshake</mat-icon> Propostas de Compradores</h3>
+              <button mat-icon-button (click)="refreshDashboardData()" title="Actualizar Listagem" style="color: #475569;">
+                <mat-icon>refresh</mat-icon>
+              </button>
+            </div>
           </div>
 
           <div class="offers-table-card">
-            @if (buyerProposals.length === 0) {
+            @if (loadingListings) {
+              <div class="skeleton-loader">
+                <div class="skeleton-row shimmer"></div>
+                <div class="skeleton-row shimmer"></div>
+              </div>
+            } @else if (buyerProposals.length === 0) {
               <div class="empty-state">
                 <mat-icon>mail_outline</mat-icon>
                 <p>Sem propostas no momento. Ofertas ativas atrairão compradores em breve!</p>
@@ -365,12 +385,22 @@
 
         <!-- Meus Interesses (RF-34) -->
         <div class="section-container" id="interesses-seccao" style="margin-top: 24px;">
-          <div class="section-header">
-            <h3><mat-icon>notifications_active</mat-icon> Meus Interesses (Manifestações Recebidas)</h3>
+          <div class="section-header" style="display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <h3><mat-icon>notifications_active</mat-icon> Meus Interesses (Manifestações Recebidas)</h3>
+              <button mat-icon-button (click)="refreshDashboardData()" title="Actualizar Listagem" style="color: #475569;">
+                <mat-icon>refresh</mat-icon>
+              </button>
+            </div>
           </div>
 
           <div class="offers-table-card">
-            @if (receivedInterests.length === 0) {
+            @if (loadingListings) {
+              <div class="skeleton-loader">
+                <div class="skeleton-row shimmer"></div>
+                <div class="skeleton-row shimmer"></div>
+              </div>
+            } @else if (receivedInterests.length === 0) {
               <div class="empty-state">
                 <mat-icon>notifications_none</mat-icon>
                 <p>Nenhuma manifestação de interesse recebida até ao momento.</p>
@@ -448,7 +478,12 @@
         <!-- Mercado Aberto -->
         <div class="section-container" id="mercado-seccao">
           <div class="section-header-filters">
-            <h3><mat-icon>travel_explore</mat-icon> Pesquisar Produtores Locais</h3>
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+              <h3><mat-icon>travel_explore</mat-icon> Pesquisar Produtores Locais</h3>
+              <button mat-icon-button (click)="refreshDashboardData()" title="Actualizar Listagem" style="color: #475569;">
+                <mat-icon>refresh</mat-icon>
+              </button>
+            </div>
             
             <div class="filters-row">
               <div class="search-input-wrapper">
@@ -465,7 +500,12 @@
           </div>
 
           <div class="market-offers-grid">
-            @if (filteredOffers.length === 0) {
+            @if (loadingListings) {
+              <div class="skeleton-loader" style="grid-column: 1 / -1;">
+                <div class="skeleton-row shimmer"></div>
+                <div class="skeleton-row shimmer"></div>
+              </div>
+            } @else if (filteredOffers.length === 0) {
               <div class="empty-state">
                 <mat-icon>search_off</mat-icon>
                 <p>Nenhuma oferta encontrada para os filtros aplicados.</p>
@@ -511,14 +551,24 @@
         <!-- Meus Pedidos de Cotação -->
         <div class="section-container">
           <div class="section-header">
-            <h3><mat-icon>assignment</mat-icon> Nossos Pedidos de Cotação</h3>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <h3><mat-icon>assignment</mat-icon> Nossos Pedidos de Cotação</h3>
+              <button mat-icon-button (click)="refreshDashboardData()" title="Actualizar Listagem" style="color: #475569;">
+                <mat-icon>refresh</mat-icon>
+              </button>
+            </div>
             <button mat-flat-button color="primary" (click)="showRequestModal = true">
               <mat-icon>add</mat-icon> Criar Pedido
             </button>
           </div>
 
           <div class="requests-list">
-            @if (myPurchaseRequests.length === 0) {
+            @if (loadingListings) {
+              <div class="skeleton-loader">
+                <div class="skeleton-row shimmer"></div>
+                <div class="skeleton-row shimmer"></div>
+              </div>
+            } @else if (myPurchaseRequests.length === 0) {
               <div class="empty-state">
                 <mat-icon>post_add</mat-icon>
                 <p>Nenhum pedido de cotação em aberto. Crie um para receber ofertas dos produtores.</p>
@@ -546,12 +596,22 @@
 
         <!-- Minhas Manifestações de Interesse (Histórico) (RF-37) -->
         <div class="section-container" style="margin-top: 24px;">
-          <div class="section-header">
-            <h3><mat-icon>history</mat-icon> Histórico de Manifestações de Interesse (Contacto e Negociação)</h3>
+          <div class="section-header" style="display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <h3><mat-icon>history</mat-icon> Histórico de Manifestações de Interesse (Contacto e Negociação)</h3>
+              <button mat-icon-button (click)="refreshDashboardData()" title="Actualizar Listagem" style="color: #475569;">
+                <mat-icon>refresh</mat-icon>
+              </button>
+            </div>
           </div>
 
           <div class="offers-table-card">
-            @if (sentInterests.length === 0) {
+            @if (loadingListings) {
+              <div class="skeleton-loader">
+                <div class="skeleton-row shimmer"></div>
+                <div class="skeleton-row shimmer"></div>
+              </div>
+            } @else if (sentInterests.length === 0) {
               <div class="empty-state">
                 <mat-icon>mail_outline</mat-icon>
                 <p>Ainda não manifestou interesse em nenhuma oferta agrícola. Explore o mercado!</p>

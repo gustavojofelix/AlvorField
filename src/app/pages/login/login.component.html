@@ -59,44 +59,7 @@
       @if (!recoveringPassword) {
         <div class="form-card-header">
           <h2>Entrar na Plataforma</h2>
-          <p>Insira os seus dados de acesso ou escolha um utilizador demonstrativo abaixo.</p>
-        </div>
-
-        <!-- Utilizadores de Teste (Painel Expansível) -->
-        <div class="demo-users-section">
-          <mat-accordion class="demo-users-accordion">
-            <mat-expansion-panel [expanded]="false" class="demo-users-panel">
-              <mat-expansion-panel-header>
-                <mat-panel-title class="section-title">
-                  <mat-icon>science</mat-icon>
-                  <span>Demonstração / Acesso Rápido</span>
-                </mat-panel-title>
-              </mat-expansion-panel-header>
-              
-              <div class="demo-users-grid">
-                @for (user of sampleUsers; track user.id) {
-                  <div class="demo-user-card" (click)="quickLogin(user)" [attr.id]="'demo-user-' + user.id">
-                    <div class="demo-user-header">
-                      <div class="avatar-circle">
-                        <mat-icon>{{ user.avatar }}</mat-icon>
-                      </div>
-                      <div class="user-meta">
-                        <span class="user-name">{{ user.nome }}</span>
-                        <span class="user-role-badge">
-                          {{ user.tipo }}
-                        </span>
-                      </div>
-                    </div>
-                    <p class="user-desc">{{ user.descricao }}</p>
-                    <div class="user-loc">
-                      <mat-icon>place</mat-icon>
-                      <span>{{ user.provincia }}, {{ user.distrito }}</span>
-                    </div>
-                  </div>
-                }
-              </div>
-            </mat-expansion-panel>
-          </mat-accordion>
+          <p>Insira os seus dados de acesso abaixo.</p>
         </div>
 
         <!-- Formulário de Login -->

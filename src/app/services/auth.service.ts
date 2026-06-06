@@ -1,5 +1,6 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, NgZone } from '@angular/core';
 import { Router } from '@angular/router';
+import { BehaviorSubject } from 'rxjs';
 import { NotificationService } from './notification.service';
 import { SupabaseService } from './supabase.service';
 
@@ -63,9 +64,15 @@ interface OtpData {
 export class AuthService {
   private readonly LOGGED_USER_KEY = 'alvorfield_current_user';
 
+  private currentUserSubject = new BehaviorSubject<Omit<User, 'password'> | null>(
+    localStorage.getItem('alvorfield_current_user') ? JSON.parse(localStorage.getItem('alvorfield_current_user')!) : null
+  );
+  public currentUser$ = this.currentUserSubject.asObservable();
+
   private supabaseService = inject(SupabaseService);
   private router = inject(Router);
   private notificationService = inject(NotificationService);
+  private ngZone = inject(NgZone);
 
   private otps = new Map<string, OtpData>();
 
@@ -74,12 +81,27 @@ export class AuthService {
   }
 
   private setupAuthListener(): void {
-    this.supabaseService.client.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user) {
-        await this.fetchAndCacheProfile(session.user.id);
-      } else if (event === 'SIGNED_OUT') {
-        localStorage.removeItem(this.LOGGED_USER_KEY);
-      }
+    this.supabaseService.client.auth.onAuthStateChange((event, session) => {
+      this.ngZone.run(async () => {
+        if (session?.user) {
+          try {
+            const user = await this.fetchAndCacheProfile(session.user.id);
+            if (!user) {
+              await this.logout();
+            }
+          } catch (e) {
+            console.error('Erro ao atualizar perfil após mudança de autenticação:', e);
+            await this.logout();
+          }
+        } else {
+          const wasLoggedIn = this.currentUserSubject.value !== null;
+          localStorage.removeItem(this.LOGGED_USER_KEY);
+          this.currentUserSubject.next(null);
+          if (wasLoggedIn) {
+            this.router.navigate(['/login']);
+          }
+        }
+      });
     });
   }
 
@@ -150,6 +172,7 @@ export class AuthService {
 
     const mappedUser = this.mapProfileToUser(profile);
     localStorage.setItem(this.LOGGED_USER_KEY, JSON.stringify(mappedUser));
+    this.currentUserSubject.next(mappedUser);
     return mappedUser;
   }
 
@@ -407,6 +430,7 @@ export class AuthService {
       console.error('Error during Supabase signOut:', e);
     } finally {
       localStorage.removeItem(this.LOGGED_USER_KEY);
+      this.currentUserSubject.next(null);
       this.router.navigate(['/login']);
     }
   }
@@ -416,6 +440,7 @@ export class AuthService {
       const { data: { session }, error } = await this.supabaseService.client.auth.getSession();
       if (error || !session) {
         localStorage.removeItem(this.LOGGED_USER_KEY);
+        this.currentUserSubject.next(null);
         return false;
       }
       const currentUser = this.getCurrentUser();
@@ -426,26 +451,26 @@ export class AuthService {
       return true;
     } catch (e) {
       localStorage.removeItem(this.LOGGED_USER_KEY);
+      this.currentUserSubject.next(null);
       return false;
     }
   }
 
   isLoggedIn(): boolean {
-    return localStorage.getItem(this.LOGGED_USER_KEY) !== null;
+    return this.currentUserSubject.value !== null;
   }
 
   getCurrentUser(): Omit<User, 'password'> | null {
-    const data = localStorage.getItem(this.LOGGED_USER_KEY);
-    return data ? JSON.parse(data) : null;
+    return this.currentUserSubject.value;
   }
 
   getDummyUsersList(): User[] {
     // Retorna perfis dummy com nomes e telefones para preenchimento rápido (Quick Login) no ecrã de login
     return [
-      { id: '1', nome: 'Mateus Tembe', telefone: '841234567', tipo: 'Produtor Individual', provincia: 'Gaza', distrito: 'Bilene' },
-      { id: '2', nome: 'Lúcia Maputo', telefone: '829876543', tipo: 'Comprador', provincia: 'Maputo Cidade', distrito: 'KaMpfumo' },
-      { id: '3', nome: 'AgroInvest Moçambique', telefone: '855554433', tipo: 'Investidor', provincia: 'Sofala', distrito: 'Beira' },
-      { id: '4', nome: 'Administrador Alvor', telefone: '840000000', tipo: 'Comprador', provincia: 'Maputo Cidade', distrito: 'KaMpfumo', isAdmin: true }
+      { id: '1', nome: 'Mateus Tembe', telefone: '841234567', password: '123456', tipo: 'Produtor Individual', provincia: 'Gaza', distrito: 'Bilene' },
+      { id: '2', nome: 'Lúcia Maputo', telefone: '829876543', password: '123456', tipo: 'Comprador', provincia: 'Maputo Cidade', distrito: 'KaMpfumo' },
+      { id: '3', nome: 'AgroInvest Moçambique', telefone: '855554433', password: '123456', tipo: 'Investidor', provincia: 'Sofala', distrito: 'Beira' },
+      { id: '4', nome: 'Administrador Alvor', telefone: '840000000', password: '123456', tipo: 'Comprador', provincia: 'Maputo Cidade', distrito: 'KaMpfumo', isAdmin: true }
     ];
   }
 

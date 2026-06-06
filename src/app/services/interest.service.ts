@@ -83,7 +83,7 @@ export class InterestService {
   }
 
   // RF-31, RF-32, RF-33: Registar Interesse
-  async createInterest(offer: Offer, mensagem: string, quantidadePretendida?: number | null): Promise<Interest> {
+  async createInterest(offer: Offer, mensagem: string, quantidadePretendida?: number | null, precoProposto?: number | null): Promise<Interest> {
     const currentUser = this.authService.getCurrentUser();
     if (!currentUser) throw new Error('Utilizador não autenticado.');
     if (currentUser.tipo !== 'Comprador') throw new Error('Apenas compradores podem manifestar interesse.');
@@ -94,7 +94,7 @@ export class InterestService {
         offer_id: offer.id,
         buyer_id: currentUser.id,
         requested_quantity: quantidadePretendida || offer.quantidade,
-        proposed_price: offer.precoUnitario,
+        proposed_price: precoProposto !== undefined && precoProposto !== null ? precoProposto : offer.precoUnitario,
         message: mensagem,
         status: 'pending'
       })

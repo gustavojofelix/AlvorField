@@ -396,27 +396,24 @@ export class MarketComponent implements OnInit {
       return;
     }
 
-    const user = this.authService.getCurrentUser();
-    const proposalsList = user?.preferences?.buyer_proposals || [];
-    
-    proposalsList.unshift({
-      id: Date.now(),
-      comprador: user?.nome || 'Comprador Registado',
-      produto: this.selectedOffer.produto,
-      quantidade: `${this.newBid.quantidade} ${this.newBid.unidade}`,
-      precoOferecido: `${this.newBid.preco} MT/${this.newBid.unidade}`,
-      status: 'Pendente'
-    });
-    
-    await this.authService.updatePreferences('buyer_proposals', proposalsList);
+    try {
+      await this.interestService.createInterest(
+        this.selectedOffer,
+        'Proposta directa de preço/quantidade.',
+        this.newBid.quantidade,
+        this.newBid.preco
+      );
 
-    this.snack.open(`Proposta enviada com sucesso para ${this.selectedOffer.produtorNome}!`, 'Excelente', {
-      duration: 4000,
-      panelClass: ['snackbar-success']
-    });
+      this.snack.open(`Proposta enviada com sucesso para ${this.selectedOffer.produtorNome}!`, 'Excelente', {
+        duration: 4000,
+        panelClass: ['snackbar-success']
+      });
 
-    this.showBidModal = false;
-    this.showDetailModal = false;
+      this.showBidModal = false;
+      this.showDetailModal = false;
+    } catch (e: any) {
+      this.snack.open(e.message || 'Erro ao enviar proposta.', 'OK', { duration: 3000 });
+    }
   }
 
   // Alertas Personalizados (RF-30)

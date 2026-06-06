@@ -1,4 +1,4 @@
-import { inject } from '@angular/core';
+import { inject, NgZone } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthService } from '../services/auth.service';
 
@@ -10,6 +10,7 @@ import { AuthService } from '../services/auth.service';
 export const authGuard = () => {
   const authService = inject(AuthService);
   const router = inject(Router);
+  const ngZone = inject(NgZone);
   
   if (authService.isLoggedIn()) {
     authService.registarAcesso(); // RF-11: Registrar último acesso ao acessar rotas protegidas
@@ -17,7 +18,9 @@ export const authGuard = () => {
     // Validar a sessão com o Supabase em segundo plano
     authService.checkSessionValid().then(isValid => {
       if (!isValid) {
-        router.navigate(['/login']);
+        ngZone.run(() => {
+          router.navigate(['/login']);
+        });
       }
     });
     
